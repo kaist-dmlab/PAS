@@ -8,10 +8,10 @@ Because periodicity is commonly observed in the physical world, a number of rese
 - Language: Python 2.7
 
 ## Data Sets
-| Name            | Size          | Link                 | 
-| :-------------- | :-----------: | -------------------: |
-| Device Analyzer | xxx GB        | Link1                | 
-| KAIST           | xx MB         | Link2                |
+| Name            | Size          | Link                 | Description                          |
+| :-------------- | :-----------: | -------------------: |-------------------------------------:|
+| Device Analyzer | xxx GB        | Link1                | 27 users smartphone usage data       |
+| KAIST           | xx MB         | Link2                | 541 users user smartphone usage data |
 
 ## How to run
 1. Install: python2.7, pandas, numpy
