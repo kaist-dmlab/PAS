@@ -3,19 +3,15 @@ Discovering Periodic Association Sequences from Multivariate Time Series
 ## Overview
 Because periodicity is commonly observed in the physical world, a number of research efforts have been devoted to detect periodic patterns in time series data. However, existing approaches have limitations in describing complex repeating behavior, such as human routine behavior, because they focus on either temporal sequence of repeating events or multivariate association in repeating events. We contend that supporting both properties plays a pivotal role in enriching the expressive power of periodic patterns. Toward this goal, in this paper, we propose a novel periodic pattern called periodic association sequence (PAS), which is represented by a sequence of periodic (or cyclic) association rules rather than typical frequent itemsets. Hence, its primary advantage is the capability of describing repeating consequences in both temporal and multivariate dimensions. Then, we present an efficient algorithm and mechanism for detecting PASs from a large-scale multivariate time-series database. Last, using two real-world smartphone log data sets, we conduct extensive experiments to demonstrate the benefits of the PAS. The evaluation results confirm that PASs are more coherent to human behavior and achieve higher confidence than state-of-the-art periodic patterns. The source code and data are available at https://github.com/jaegil/PAS.
 
-## Paper
-Our proposed method PAS Mining is described in the following paper.
-  - Discovering Periodic Association Sequences from Multivariate Time Series, KDD 2017 [Submitted]
-
-## Code
-- The binary code used in the paper in available at https://github.com/jaegil/PAS.
+## Algorithm
 - Language: Python 2.7
+- We implemented copared methods in our source code. It generate same output(patterns) with each method, but we don't apply efficiency techinque.
 
 ## Data Sets
-| Name            | Size          | Link                 | Description                          |
-| :-------------- | ------------: | -------------------: |:-------------------------------------|
-| Device Analyzer | xxx GB        | Link1                | 541 users smartphone usage data      |
-| KAIST           | xx MB         | Link2                | 27 users user smartphone usage data  |
+| Name            | Size          | Link                 | Description                                    |
+| :-------------- | ------------: | -------------------: |:-----------------------------------------------|
+| Device Analyzer | -             | Link1                | Please get licences from link to get dataset   |
+| KAIST           | xx MB         | Link2                | 27 users user smartphone usage data            |
 
 ## How to run
 1. Install: python2.7, pandas, numpy
