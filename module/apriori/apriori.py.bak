@@ -1,0 +1,272 @@
+"""
+Description     : Simple Python implementation of the Apriori Algorithm
+
+Usage:
+    $python apriori.py -f DATASET.csv -s minSupport  -c minConfidence
+
+    $python apriori.py -f DATASET.csv -s 0.15 -c 0.6
+"""
+
+import sys
+
+from itertools import chain, combinations
+from collections import defaultdict
+from optparse import OptionParser
+import datetime as dt
+import time
+
+
+def subsets(arr):
+    """ Returns non empty subsets of arr"""
+    return chain(*[combinations(arr, i + 1) for i, a in enumerate(arr)])
+
+
+def returnItemsWithMinSupport(itemSet, transactionList, timestampList, itemTimestampIndexDict, dateStampSet, minSupport, freqSet):
+        """calculates the support for items in the itemSet and returns a subset
+       of the itemSet each of whose elements satisfies the minimum support"""
+        _itemSet = set()
+        localSet = defaultdict(int)
+
+        print "# Candidates: " + str(len(itemSet))
+
+        for itemIdx, item in enumerate(itemSet):
+                # print "ITEM: " + str(item)
+                # print "# ELEMENTS: " + str(len(item))
+                tsSet = set()
+                for i, element in enumerate(item):
+                        elementTsSet = itemTimestampIndexDict[element]
+                        if i == 0:
+                            tsSet = elementTsSet
+                        else:
+                            tsSet = tsSet & elementTsSet
+
+                # print "# ts: " + str(len(tsSet))
+                """ Count days occuring item as support value """
+                timestamp_set = set()
+                for ts in tsSet:
+                        timestamp = timestampList[ts]
+                        timestamp = dt.datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S').strftime('%Y-%m-%d')
+                        if timestamp not in timestamp_set:
+                                timestamp_set.add(timestamp)
+                                freqSet[item] += 1
+                                localSet[item] += 1
+
+        for item, count in localSet.items():
+                # support = float(count)/len(transactionList)
+                support = float(count) / len(dateStampSet)
+                if support >= minSupport:
+                        # print item
+                        # print support
+                        _itemSet.add(item)
+
+        return _itemSet
+
+
+def joinSet(itemSet, length, mustContainTime=False):
+        if not mustContainTime:
+                """Join a set with itself and returns the n-element itemsets"""
+                return set([i.union(j) for i in itemSet for j in itemSet if len(i.union(j)) == length])
+        else:
+                joinedItemSet = set()
+                for i in itemSet:
+                    for element in i:
+                        if 'time_daily' in element:
+                            for j in itemSet:
+                                if len(i.union(j)) == length:
+                                    joinedItemSet.add(i.union(j))
+                            break
+                return joinedItemSet
+
+
+def isImplyImpossible(left, right):
+    relatedAppSet = set(['appcat[cat]', 'appname[cat]', 'screen_power[cat]'])
+    relatedBatterySet = set(['battery_level[conti]', 'charge_detail_state[cat]'])
+    relatedWifiSet = set(['wifi_conn_state[cat]', 'wifi_onoff_state[cat]'])
+
+    left_feature_set = set()
+    for left_feature_value in left:
+        left_feature = left_feature_value.split(":")[0]
+        left_feature_set.add(left_feature)
+    impossible_right_feature_set = set()
+    for left_feature in left_feature_set:
+        relatedFeatureSet = None
+        if left_feature in relatedAppSet:
+            relatedFeatureSet = relatedAppSet
+        elif left_feature in relatedBatterySet:
+            relatedFeatureSet = relatedBatterySet
+        elif left_feature in relatedWifiSet:
+            relatedFeatureSet = relatedWifiSet
+        if relatedFeatureSet is not None:
+            impossible_right_feature_set |= relatedFeatureSet
+    if len(impossible_right_feature_set) > 0:
+        for right_feature_value in right:
+            right_feature = right_feature_value.split(":")[0]
+            if right_feature in impossible_right_feature_set:
+                return False
+    return True
+
+
+def getItemSetTransactionList(data_iterator):
+    transactionList = list()
+    itemSet = set()
+    timestampList = list()
+    itemTimestampIndexDict = dict()
+
+    for ts, record in enumerate(data_iterator):
+        transaction = frozenset(record)
+        timestamp = sorted(list(transaction))[0]
+        timestampList.append(timestamp)
+        transactionList.append(transaction)
+        for item in transaction:
+            if item not in itemTimestampIndexDict:
+                itemTimestampIndexDict[item] = set()
+            itemTimestampIndexDict[item].add(ts)
+            itemSet.add(frozenset([item]))              # Generate 1-itemSets
+    return itemSet, transactionList, timestampList, itemTimestampIndexDict
+
+
+def runApriori(data_iter, minSupport, minConfidence, maxK=99999999, removeImposibleImply=True):
+    """
+    run the apriori algorithm. data_iter is a record iterator
+    Return both:
+     - items (tuple, support)
+     - rules ((pretuple, posttuple), confidence)
+    """
+    itemSet, transactionList, timestampList, itemTimestampIndexDict = getItemSetTransactionList(data_iter)
+    dateStampSet = set()
+    for timestamp in timestampList:
+            timestamp = dt.datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S').strftime('%Y-%m-%d')
+            dateStampSet.add(timestamp)
+
+    freqSet = defaultdict(int)
+    largeSet = dict()
+    # Global dictionary which stores (key=n-itemSets,value=support)
+    # which satisfy minSupport
+
+    assocRules = dict()
+    # Dictionary which stores Association Rules
+
+    start_ts = time.time()
+    oneCSet = returnItemsWithMinSupport(itemSet,
+                                        transactionList,
+                                        timestampList,
+                                        itemTimestampIndexDict,
+                                        dateStampSet,
+                                        minSupport,
+                                        freqSet)
+    end_ts = time.time()
+    print "# LEN-1: " + str(len(oneCSet))
+    print "Time: " + str(end_ts - start_ts)
+
+    currentLSet = oneCSet
+    k = 2
+    while(currentLSet != set([]) and k <= maxK):
+        start_ts = time.time()
+        largeSet[k - 1] = currentLSet
+        if k == 2:
+            currentLSet = joinSet(currentLSet, k, True)
+        else:
+            currentLSet = joinSet(currentLSet, k)
+        currentCSet = returnItemsWithMinSupport(currentLSet,
+                                                transactionList,
+                                                timestampList,
+                                                itemTimestampIndexDict,
+                                                dateStampSet,
+                                                minSupport,
+                                                freqSet)
+        end_ts = time.time()
+        print "# LEN-%d: " % (k) + str(len(currentCSet))
+        print "Time: " + str(end_ts - start_ts)
+
+        currentLSet = currentCSet
+        k = k + 1
+
+    def getSupport(item):
+            """local function which Returns the support of an item"""
+            # return float(freqSet[item])/len(transactionList)
+            return float(freqSet[item]) / len(dateStampSet)
+
+    toRetItems = []
+    for key, value in largeSet.items():
+        toRetItems.extend([(tuple(item), getSupport(item))
+                           for item in value])
+    toRetRules = []
+    for key, value in largeSet.items()[1:]:
+        for item in value:
+            _subsets = map(frozenset, [x for x in subsets(item)])
+            for element in _subsets:
+                hasTime = False
+                for i in element:
+                    if 'time_daily' in i:
+                        hasTime = True
+                        break
+                if hasTime:
+                    remain = item.difference(element)
+                    if len(remain) > 0 and isImplyImpossible(element, remain):
+                        support = getSupport(item)
+                        confidence = support / getSupport(element)
+                        # confidence = getSupport(item)/getSupport(element)
+                        if confidence >= minConfidence:
+                            toRetRules.append(((tuple(element), tuple(remain)),
+                                               confidence, support))
+    return toRetItems, toRetRules, itemTimestampIndexDict, timestampList
+
+
+def printResults(items, rules):
+    """prints the generated itemsets sorted by support and the confidence rules sorted by confidence"""
+    for item, support in sorted(items, key=lambda (item, support): support):
+        print "item: %s , %.3f" % (str(item), support)
+
+    print "\n------------------------ RULES:"
+    for rule, confidence, support in sorted(rules, key=lambda (rule, confidence, support): confidence):
+        pre, post = rule
+        print "Rule: %s ==> %s , %.3f, %.3f" % (str(pre), str(post), confidence, support)
+
+
+def dataFromFile(fname, hasClass=False):
+        """Function which reads from the file and yields a generator"""
+        file_iter = open(fname, 'rU')
+        for line in file_iter:
+                line = line.strip().rstrip(',')                         # Remove trailing comma
+                if hasClass:
+                    record = frozenset(line.split(',')[1:])
+                else:
+                    record = frozenset(line.split(','))
+                yield record
+
+
+if __name__ == "__main__":
+
+    optparser = OptionParser()
+    optparser.add_option('-f', '--inputFile',
+                         dest='input',
+                         help='filename containing csv',
+                         default=None)
+    optparser.add_option('-s', '--minSupport',
+                         dest='minS',
+                         help='minimum support value',
+                         default=0.15,
+                         type='float')
+    optparser.add_option('-c', '--minConfidence',
+                         dest='minC',
+                         help='minimum confidence value',
+                         default=0.6,
+                         type='float')
+
+    (options, args) = optparser.parse_args()
+
+    inFile = None
+    if options.input is None:
+            inFile = sys.stdin
+    elif options.input is not None:
+            inFile = dataFromFile(options.input)
+    else:
+            print 'No dataset filename specified, system with exit\n'
+            sys.exit('System will exit')
+
+    minSupport = options.minS
+    minConfidence = options.minC
+
+    items, rules = runApriori(inFile, minSupport, minConfidence)
+
+    printResults(items, rules)
