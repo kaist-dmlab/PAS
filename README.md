@@ -9,7 +9,7 @@ Because periodicity is commonly observed in the physical world, a number of rese
 
 ## Data Sets
 | Name            | Size          | Link                 | Description                          |
-| :-------------- | :-----------: | -------------------: |-------------------------------------:|
+| :-------------- | ------------: | -------------------: |:-------------------------------------|
 | Device Analyzer | xxx GB        | Link1                | 27 users smartphone usage data       |
 | KAIST           | xx MB         | Link2                | 541 users user smartphone usage data |
 
