@@ -64,7 +64,7 @@ Because periodicity is commonly observed in the physical world, a number of rese
   
 ## Experiment Result
 1. Comparision with Association-Only
-  <img height="400" src="http://dmserver6.kaist.ac.kr/PAS/img/compared_association.png"></img>
+  <img height="350" src="http://dmserver6.kaist.ac.kr/PAS/img/compared_association.png"></img>
 2. Comparision with Sequence-Only <br/>
   <img height="200" src="http://dmserver6.kaist.ac.kr/PAS/img/compared_sequence.png"></img>
 3. Performance and Scalability Result
