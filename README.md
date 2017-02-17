@@ -6,7 +6,7 @@ Because periodicity is commonly observed in the physical world, a number of rese
 ## Algorithm
 | Approach                 | Method          | Paper                |
 | :----------------------- | :-------------- | :------------------- |
-| Assocation-only approach | MobileMinder    | [Srinivasan et al.](https://ai2-s2-pdfs.s3.amazonaws.com/b379/bc081918226f5f92f1919bceebbb76a1d027.pdf)|
+| Assocation-only approach | MobileMiner     | [Srinivasan et al.](https://ai2-s2-pdfs.s3.amazonaws.com/b379/bc081918226f5f92f1919bceebbb76a1d027.pdf)|
 | Sequence-only approach   | SMCA            | [Huang et al.](http://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=1423978) |
 | **Our apprach**          | **PAS_MINING**  |                      |
 - Language: Python 2.7
