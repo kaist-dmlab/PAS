@@ -29,7 +29,7 @@ Because periodicity is commonly observed in the physical world, a number of rese
 | Variable          | Description          | Type    | # Instances   |
 | :---------------: | :------------------: | :-----: |:-------------:|
 | appcat            | Application category | nominal |	18,676,555   |
-| celllocation\_lac | Location name\,(LAC) | nominal |	25,104,298   |
+| celllocation\_lac | Location name (LAC)  | nominal |	25,104,298   |
 | charge\_state     | Charge status        | nominal |	5,293,941    |
 | headset           | Headset on/off       | binary  |	1,004,573    |
 | ringermode        | Ringtone mode        | nominal |	4,728,265    |
