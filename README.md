@@ -10,13 +10,19 @@ Because periodicity is commonly observed in the physical world, a number of rese
 | Sequence-only approach   | SMCA            | [Huang et al.](http://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=1423978) |
 | **Our apprach**          | **PAS_MINING**  |                      |
 - Language: Python 2.7
-- We implemented copared methods in our source code. It generate same output(patterns) with each method, but we don't apply efficiency techinque.
+- We implemented compared methods in our source code. It generate same output(patterns) with each method, but we don't apply efficiency techinque.
 
 ## Data Sets
 | Name            | Link                                         | Description                                    |
 | :-------------- | :------------------------------------------- |:-----------------------------------------------|
 | Device Analyzer | [Link](https://deviceanalyzer.cl.cam.ac.uk/) | Please get licences from link to get dataset   |
 | KAIST           | [Link](http://dmserver6.kaist.ac.kr/PAS/kaist_dataset.tar.gz) | 27 users smartphone usage data |
+
+- Data example
+![Data example](http://dmserver6.kaist.ac.kr/PAS/img/data_example.png "Data example")
+
+- Periodicity Distribution using our proposed PERIODICITY SPECTRUM
+<img height="200" src="http://dmserver6.kaist.ac.kr/PAS/img/periodicity_distribution.png"></img>
 
 - Variables used in the Device Analyzer data set
 
