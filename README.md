@@ -21,7 +21,7 @@ Because periodicity is commonly observed in the physical world, a number of rese
 - Data example
 ![Data example](http://dmserver6.kaist.ac.kr/PAS/img/data_example.png "Data example")
 
-- Periodicity Distribution using our proposed PERIODICITY SPECTRUM
+- Periodicity Distribution using our proposed **PERIODICITY SPECTRUM**
 <img height="200" src="http://dmserver6.kaist.ac.kr/PAS/img/periodicity_distribution.png"></img>
 
 - Variables used in the Device Analyzer data set
