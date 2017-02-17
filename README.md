@@ -62,3 +62,10 @@ Because periodicity is commonly observed in the physical world, a number of rese
   - max_gap: the maximum gap
 4. Run 'python pas_mining.py'
   
+## Experiment Result
+1. Comparision with Association-Only
+<img height="200" src="http://dmserver6.kaist.ac.kr/PAS/img/compared_association.png"></img>
+2. Comparision with Sequence-Only
+<img height="200" src="http://dmserver6.kaist.ac.kr/PAS/img/compared_sequence.png"></img>
+3. Performance and Scalability Result
+<img height="200" src="http://dmserver6.kaist.ac.kr/PAS/img/performance.png"></img>
