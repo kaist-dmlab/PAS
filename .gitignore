@@ -87,3 +87,9 @@ ENV/
 
 # Rope project settings
 .ropeproject
+
+# Test directory
+dataset
+output
+entropy_result
+rules
