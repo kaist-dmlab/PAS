@@ -8,6 +8,7 @@ import os.path
 import operator
 import numpy as np
 import pandas as pd
+import AssociationExperiment2 as AssociationExperiment
 IS_DEBUG = False
 
 
@@ -365,12 +366,10 @@ def concatLeftCandidate(k, left_candidates, left1, itemTimestampIndexDict, min_s
                         if support >= min_sup and confidence >= min_conf:
                             nextRules.append(rule_info)
                             debug_print("\t".join(str(element) for element in rule_info))
-                            '''
                             if (left1, right1) in unique_candidate_rules:
                                 del unique_candidate_rules[(left1, right1)]
                             if (left2, right2) in unique_candidate_rules:
                                 del unique_candidate_rules[(left2, right2)]
-                            '''
                             validRules.append(rule_info)
                         debug_print("-------------")
 
@@ -390,14 +389,14 @@ def getClassFromFile(filename):
     return class_list
 
 
-dir_path = 'dataset/raw'
+dir_path = 'dataset/KAIST'
 output_dir = dir_path
 rules_dir = 'rules'
 granularity_min = 60
-MIN_DATE_LENGTH = 30
+MIN_DATE_LENGTH = 7 # In the Device Analyzer 30, In the KAIST 10
 
 max_gap = 1
-min_sup = 1.0 / 10.0
+min_sup = 2.0 / 10.0
 min_conf = 2.0 / 10.0
 
 
@@ -419,22 +418,28 @@ for user_idx, file_info in enumerate(file_info_list):
     full_data, _ = removed_default_value.removed_default_value(file_path, output_dir, NIGHT_START_TIMESTAMP_STRING='01-00-00', NIGHT_END_TIMESTAMP_STRING='07-00-00', drop_default=False, drop_feature=False, is_full=True)
     print full_data.keys()
     data, file_path = removed_default_value.removed_default_value(file_path, output_dir, NIGHT_START_TIMESTAMP_STRING='01-00-00', NIGHT_END_TIMESTAMP_STRING='07-00-00')
-    print data.keys()
 
     timestamps = data[data.keys()[0]].index
-    if 'class' not in data:
+    if 'class' not in full_data:
         print "!!! NO CLASS !!!"
         # log.write('%s\tNO_CLASS\n' % file_info)
         continue
 
     csv_file = output_dir + "/" + file_path.split('/')[-1].split('.')[0] + '_%d.csv' % (granularity_min)
-    daily_time_list, tid_to_granualarity_tid = dictToCsv.exportToCSV(data, timestamps, csv_file, include_class=True, granularity_min=granularity_min)
+    daily_time_list, tid_to_granualarity_tid = dictToCsv.exportToCSV(data, timestamps, csv_file, include_class=False, granularity_min=granularity_min)
     class_list = getClassFromFile(csv_file)
-    inFile = Apriori.dataFromFile(csv_file, hasClass=True)
+    inFile = Apriori.dataFromFile(csv_file, hasClass=False)
     print "Complete Read CSV for Apriori"
 
     ''' START GETTING MCPP '''
 
+    if not os.path.isdir('entropy_result'):
+        os.mkdir('entropy_result')
+
+    f_entropy_result_pickle = open('entropy_result/%s_pattern_pair_entropy_%.2f_%.2f.pickle' % (file_info, min_sup, min_conf), 'w')
+    f_entropy_result = open('entropy_result/%s_pattern_pair_entropy_%.2f_%.2f.txt' % (file_info, min_sup, min_conf), 'w')
+    f_entropy_avg_result = open('entropy_result/%s_class_avg_entropy_%.2f_%.2f.txt' % (file_info, min_sup, min_conf), 'w')
+    pattern_pair_entropy_result_list = list()
 
     test_combination_cnt = 0
     pattern_all_tids = dict()
@@ -445,7 +450,7 @@ for user_idx, file_info in enumerate(file_info_list):
 
     existRules = False
 
-    if False and os.path.exists(ALL_RULE_PATH) and os.path.exists(ALL_UNIQUE_PATH) and os.path.exists(APRIORI_RESULT_PATH):
+    if os.path.exists(ALL_RULE_PATH) and os.path.exists(ALL_UNIQUE_PATH) and os.path.exists(APRIORI_RESULT_PATH):
         print "ALREADY EXIST: " + str(ALL_RULE_PATH)
         print "ALREADY EXIST: " + str(ALL_UNIQUE_PATH)
 
@@ -494,7 +499,7 @@ for user_idx, file_info in enumerate(file_info_list):
         f_all_rule = open(ALL_RULE_PATH, 'w')
         f_all_unique_rule = open(ALL_UNIQUE_PATH, 'w')
         f_pattern = open(rules_dir + "/" + file_path.split('/')[-1].split('.')[0] + '_MCPP_%d.txt' % granularity_min, 'w')
-        # f_unique_pattern = open(rules_dir + "/" + file_path.split('/')[-1].split('.')[0] + '_UNIQUE_MCPP_%d.txt' % granularity_min, 'w')
+        f_unique_pattern = open(rules_dir + "/" + file_path.split('/')[-1].split('.')[0] + '_UNIQUE_MCPP_%d.txt' % granularity_min, 'w')
 
         rules_1_result = (items, rules_1, itemTimestampIndexDict, timestampList)
         pickle.dump(rules_1_result, f)
@@ -505,7 +510,7 @@ for user_idx, file_info in enumerate(file_info_list):
         right_left_dict = dict()
         left1_candidates = dict()
         right1_candidate = dict()
-        # unique_candidate_rules = dict()
+        unique_candidate_rules = dict()
         all_rule_list = list()
 
         print "Building LEFT1, RIGHT1 relationship"
@@ -576,7 +581,7 @@ for user_idx, file_info in enumerate(file_info_list):
         for i, rule in enumerate(rules_1):
             left = rule[0]
             right = rule[1]
-            # unique_candidate_rules[(left, right)] = rule
+            unique_candidate_rules[(left, right)] = rule
             all_rule_list.append(rule)
             rules.append(rule)
 
@@ -604,6 +609,8 @@ for user_idx, file_info in enumerate(file_info_list):
         print "# LEFT1: %d" % (len(left1_candidates))
         print "# RIGHT1: %d" % (len(right1_candidate))
 
+        all_unique_rule_list = list()
+
         k = 1
         while True:
             k += 1
@@ -623,25 +630,24 @@ for user_idx, file_info in enumerate(file_info_list):
                 if i % 100 == 0:
                     print "LEFT1: %d / %d" % (i, len(sorted_left1))
 
-            '''
             for key in unique_candidate_rules:
                 rule = unique_candidate_rules[key]
                 all_unique_rule_list.append(rule)
                 rule = (rule[0], rule[1], rule[4], rule[5])
-                # f_unique_pattern.write("\t".join(str(element) for element in rule) + "\n")
-            '''
+                f_unique_pattern.write("\t".join(str(element) for element in rule) + "\n")
+
             # print "# Stop Growth Rules (%d sequences): %d" % (k - 1, len(unique_candidate_rules))
 
             left_right_dict = dict()
             right_left_dict = dict()
             left1_candidates = dict()
             right1_candidate = dict()
-            # unique_candidate_rules = dict()
+            unique_candidate_rules = dict()
 
             for rule in next_rules:
                 left = rule[0]
                 right = rule[1]
-                # unique_candidate_rules[(left, right)] = rule
+                unique_candidate_rules[(left, right)] = rule
                 all_rule_list.append(rule)
 
                 if left not in left_right_dict:
@@ -673,18 +679,86 @@ for user_idx, file_info in enumerate(file_info_list):
                 print "Complete"
                 break
 
-        '''
         for key in unique_candidate_rules:
             rule = unique_candidate_rules[key]
             all_unique_rule_list.append(rule)
             rule = (rule[0], rule[1], rule[4], rule[5])
             f_unique_pattern.write("\t".join(str(element) for element in rule) + "\n")
-        '''
-        f_pattern.close()
-        # f_unique_pattern.close()
 
-        # pickle.dump(all_unique_rule_list, f_all_unique_rule)
-        # f_all_unique_rule.close()
+        f_pattern.close()
+        f_unique_pattern.close()
+
+        pickle.dump(all_unique_rule_list, f_all_unique_rule)
+        f_all_unique_rule.close()
 
         pickle.dump(all_rule_list, f_all_rule)
         f_all_rule.close()
+
+    ''' Complete gettting MCPP. After this line, calculating entropy in fully pattern and unfully pattern '''
+
+    # Get features from MCPP
+    period_feature_set = set()
+    period_feature_count_dict = dict()
+    for rule in all_rule_list:
+        left = rule[0]
+        right = rule[1]
+        if len(left) != 1: # Count feature weight for period pattern in 1-MCPP
+            continue
+        for freq_pattern in [left, right]:
+            for freq_pattern_item in freq_pattern:
+                for item in freq_pattern_item:
+                    feature = item.split(':')[0]
+                    if feature == 'time_daily':
+                        continue
+                    period_feature_set.add(feature)
+                    if feature not in period_feature_count_dict:
+                        period_feature_count_dict[feature] = 0
+                    period_feature_count_dict[feature] += 1
+
+    print "Freqeuncy of Period Feature in Periodic Pattern (MCPP-1) - %s" % str(period_feature_count_dict)
+    feature_set = set(data.keys())
+    period_feature_set = feature_set & period_feature_set
+    # feature_set = feature_set - period_feature_set
+    if len(period_feature_set) == 0:
+        continue
+
+    class_threshold = int(len(dateStampSet) * min_sup)
+    feature_set = set(full_data.keys()) - set(['celllocation_cid[cat]', 'celllocation_laccid[cat]'])
+    class_feature_set = feature_set - period_feature_set
+
+    for class_idx, class_label in enumerate(class_feature_set):
+        print "Calculating entropy for class feature: %s (%d/%d)" % (class_label, class_idx, len(class_feature_set))
+        pattern_len_fully_unfully_pattern_dict = dict()
+        fully_unfully_entropy_list = AssociationExperiment.AnalysisEntropy(full_data, all_unique_rule_list, file_path, class_threshold, granularity_min, class_label)
+        for fully_unfully_entropy in fully_unfully_entropy_list:
+            fully_pattern, unfully_pattern_list, fully_class_list, unfully_class_list, fully_class_entropy, unfully_class_entropy = fully_unfully_entropy
+            pattern_len = len(fully_pattern[0])
+            if pattern_len not in pattern_len_fully_unfully_pattern_dict:
+                pattern_len_fully_unfully_pattern_dict[pattern_len] = dict()
+                pattern_len_fully_unfully_pattern_dict[pattern_len]["fully"] = list()
+                pattern_len_fully_unfully_pattern_dict[pattern_len]["unfully"] = list()
+
+            # print "%s\t%s\t%s\t%s\t%d\t%d\t%f\t%f" % (file_info, class_label, fully_pattern, unfully_pattern_list, len(fully_class_list), len(unfully_class_list), fully_class_entropy, unfully_class_entropy)
+            max_conditional_len = 0
+            for fully_mcpp_1 in fully_pattern[0]:
+                if max_conditional_len < len(fully_mcpp_1):
+                    max_conditional_len = len(fully_mcpp_1)
+            if max_conditional_len > 1:
+                pattern_len_fully_unfully_pattern_dict[pattern_len]["fully"].append(fully_class_entropy)
+                pattern_len_fully_unfully_pattern_dict[pattern_len]["unfully"].append(unfully_class_entropy)
+            f_entropy_result.write("%s\t%s\t%d\t%d\t%s\t%s\t%d\t%d\t%f\t%f\n" % (file_info, class_label, pattern_len, max_conditional_len, str(fully_pattern[0]) + "-" + str(fully_pattern[1]), [str(unfully_pattern[0]) + "-" + str(unfully_pattern[1]) for unfully_pattern in unfully_pattern_list], len(fully_class_list), len(unfully_class_list), fully_class_entropy, unfully_class_entropy))
+            pattern_pair_entropy_result_list.append((file_info, class_label, pattern_len, max_conditional_len, str(fully_pattern[0]) + "-" + str(fully_pattern[1]), [str(unfully_pattern[0]) + "-" + str(unfully_pattern[1]) for unfully_pattern in unfully_pattern_list], fully_class_list, unfully_class_list, fully_class_entropy, unfully_class_entropy))
+        pattern_len_list = sorted(pattern_len_fully_unfully_pattern_dict.keys())
+        for pattern_len in pattern_len_fully_unfully_pattern_dict:
+            fully_entropy_list = pattern_len_fully_unfully_pattern_dict[pattern_len]["fully"]
+            unfully_entropy_list = pattern_len_fully_unfully_pattern_dict[pattern_len]["unfully"]
+            fully_entropy_mean = np.mean(fully_entropy_list) if len(fully_entropy_list) > 0 else -1
+            unfully_entropy_mean = np.mean(unfully_entropy_list) if len(unfully_entropy_list) > 0 else -1
+
+            f_entropy_avg_result.write("%s\t%s\t%d\t%d\t%d\t%f\t%f\n" % (file_info, class_label, pattern_len, len(fully_entropy_list), len(unfully_entropy_list), fully_entropy_mean, unfully_entropy_mean))
+    f_entropy_result.flush()
+    f_entropy_avg_result.flush()
+    # PlotData.PlotData(dir_path, output_dir, file_info, granularity_min=granularity_min)
+    pickle.dump(pattern_pair_entropy_result_list, f_entropy_result_pickle)
+    f_entropy_result.close()
+    f_entropy_result_pickle.close()
