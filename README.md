@@ -60,12 +60,17 @@ Because periodicity is commonly observed in the physical world, a number of rese
   - min_sup: the minimum support
   - min_conf: the minimum confidence
   - max_gap: the maximum gap
-4. Run 'python pas_mining.py'
+4. Run '**python pas_mining.py**'
   
-## Experiment Result
+## Experiment
+All results of experiments is saved in 'output' directory. Please make sure existing 'output' directory.
+
 1. Comparision with Association-Only
-  <img height="350" src="http://dmserver6.kaist.ac.kr/PAS/img/compared_association.png"></img>
+  - **How to run**: python experiment_association_only.py
+  - <img height="300" src="http://dmserver6.kaist.ac.kr/PAS/img/compared_association.png"></img>
 2. Comparision with Sequence-Only <br/>
-  <img height="200" src="http://dmserver6.kaist.ac.kr/PAS/img/compared_sequence.png"></img>
+  - **How to run**: python experiment_sequence_only.py
+  - <img height="150" src="http://dmserver6.kaist.ac.kr/PAS/img/compared_sequence.png"></img>
 3. Performance and Scalability Result
-  <img height="200" src="http://dmserver6.kaist.ac.kr/PAS/img/performance.png"></img>
+  - **How to run**: python pas_mining_performance.py & python experiment_performance.py
+  - <img height="150" src="http://dmserver6.kaist.ac.kr/PAS/img/performance.png"></img>
