@@ -66,11 +66,11 @@ Because periodicity is commonly observed in the physical world, a number of rese
 All results of experiments is saved in 'output' directory. Please make sure existing 'output' directory.
 
 1. Comparision with Association-Only
-  - **How to run**: python experiment_association_only.py
+  - Run '**python experiment_association_only.py**'
   - <img height="300" src="http://dmserver6.kaist.ac.kr/PAS/img/compared_association.png"></img>
 2. Comparision with Sequence-Only <br/>
-  - **How to run**: python experiment_sequence_only.py
+  - Run '**python experiment_sequence_only.py**'
   - <img height="150" src="http://dmserver6.kaist.ac.kr/PAS/img/compared_sequence.png"></img>
 3. Performance and Scalability Result
-  - **How to run**: python pas_mining_performance.py & python experiment_performance.py
+  - Run '**python pas_mining_performance.py & python experiment_performance.py**'
   - <img height="150" src="http://dmserver6.kaist.ac.kr/PAS/img/performance.png"></img>
