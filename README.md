@@ -70,7 +70,7 @@ All results of experiments is saved in 'output' directory. Please make sure exis
   - <img height="360" src="http://dmserver6.kaist.ac.kr/PAS/img/compared_association.png"></img>
 2. Comparision with Sequence-Only <br/>
   - Run '**python experiment_sequence_only.py**'
-  - <img height="180" src="http://dmserver6.kaist.ac.kr/PAS/img/compared_sequence.png"></img>
+  - <img height="200" src="http://dmserver6.kaist.ac.kr/PAS/img/compared_sequence.png"></img>
 3. Performance and Scalability Result
   - Run '**python pas_mining_performance.py & python experiment_performance.py**'
-  - <img height="180" src="http://dmserver6.kaist.ac.kr/PAS/img/performance.png"></img>
+  - <img height="200" src="http://dmserver6.kaist.ac.kr/PAS/img/performance.png"></img>
