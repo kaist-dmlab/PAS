@@ -66,11 +66,11 @@ Because periodicity is commonly observed in the physical world, a number of rese
 All results are saved in the 'output' directory. Please make sure the 'output' directory existing and accessible.
 
 1. Comparision with Association-Only
-  - Run '**python experiment_association_only.py**'
-  - <img height="360" src="http://dmserver6.kaist.ac.kr/PAS/img/compared_association.png"></img>
+  - Run '**python experiment_association_only.py**'<br/>
+    <img height="360" src="http://dmserver6.kaist.ac.kr/PAS/img/compared_association.png"></img>
 2. Comparision with Sequence-Only <br/>
-  - Run '**python experiment_sequence_only.py**'
-  - <img height="210" src="http://dmserver6.kaist.ac.kr/PAS/img/compared_sequence.png"></img>
+  - Run '**python experiment_sequence_only.py**'<br/>
+    <img height="210" src="http://dmserver6.kaist.ac.kr/PAS/img/compared_sequence.png"></img>
 3. Performance and Scalability Result
-  - Run '**python pas_mining_performance.py & python experiment_performance.py**'
-  - <img height="210" src="http://dmserver6.kaist.ac.kr/PAS/img/performance.png"></img>
+  - Run '**python pas_mining_performance.py & python experiment_performance.py**'<br/>
+    <img height="210" src="http://dmserver6.kaist.ac.kr/PAS/img/performance.png"></img>
