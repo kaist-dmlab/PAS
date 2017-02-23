@@ -10,7 +10,7 @@ Because periodicity is commonly observed in the physical world, a number of rese
 | Sequence-only approach   | SMCA            | [Huang et al.](http://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=1423978) |
 | **Our apprach**          | **PAS_MINING**  |                      |
 - Language: Python 2.7
-- We implemented the competitors such that they produce the correct results. In other words, we did not fully implement the efficiency optimization technieus for the competitors, becasue efficiency comparison with the competitors is beyond the scope of the paper.
+- We incorporated the competitors into our single implementation. The implementation of the competitors guarantees the correct output, but we did not fully implement the efficiency optimization techniques for the competitors because efficiency comparison with the competitors is beyond the scope of the paper.
 
 ## Data Sets
 | Name            | Link                                         | Description                                    |
@@ -56,7 +56,7 @@ Because periodicity is commonly observed in the physical world, a number of rese
   - rules_dir: the path of final results (patterns)
   - granularity_min: time span size (in minutes)
   - MIN_DATE_LENGTH: the minimum number of days which valid users should have
-3. Set paramters in pas_mining.py
+3. Set the configuration paramters in pas_mining.py
   - min_sup: the minimum support
   - min_conf: the minimum confidence
   - max_gap: the maximum gap
