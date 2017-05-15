@@ -58,9 +58,10 @@ def isValidateCombanation(min_sup, left1, left2, pruned_candidate, able_candidat
     if not is_right:
         sequence_key = ('left', left1, left2, None)
     else:
+        # If this check expansion of right, it have to know gap information from merged left.
         if left_tids_for_right is not None and len(left_tids_for_right) > 0:
             left_tids = left_tids_for_right[0]
-            idx_delta_list = list()
+            idx_delta_list = list() # Gap array, If <{1pm}{2pm}{4pm}>, idx_delta_list is [1,2].
             prev_tid = None
             for tid in left_tids:
                 if prev_tid is not None:
@@ -74,6 +75,7 @@ def isValidateCombanation(min_sup, left1, left2, pruned_candidate, able_candidat
 
     test_combination_cnt += 1
 
+    # Caching
     if pruned_candidate.get(sequence_key, -1) == 1:
         return is_sequence, None, None, None
     if able_candidate.get(sequence_key, -1) != -1:
@@ -85,6 +87,7 @@ def isValidateCombanation(min_sup, left1, left2, pruned_candidate, able_candidat
     debug_print("LEFT1: " + str(left1))
     debug_print("LEFT2: " + str(left2))
 
+    # Check joinable
     pattern_len = len(left1)
     if pattern_len == 1:
         left1_time_daily_index = findIndexWithKey('time_daily', left1[0])
@@ -108,30 +111,36 @@ def isValidateCombanation(min_sup, left1, left2, pruned_candidate, able_candidat
             if left1_for_right1[-(pattern_len - 1):] == left2_for_right2[:pattern_len - 1]:
                 left1_left2_for_right1_right2 = left1_for_right1 + left2_for_right2[-1:]
 
+    # When joining left find tids of patterns and gap array
+    # When joining right get tids of pattern if cached or find tids and cache.
     if new_pattern not in pattern_all_tids:
         all_tids = list()
         valid_pattern_idx_list = []
         idx_delta_list = []
         prev_idx = None
         pattern_idx_dict = dict()
+        # If <{A}{B}{C}>
         for i, pattern in enumerate(new_pattern):
+            # {A}=1, {B}=2, {C}=3
             if pattern not in pattern_idx_dict:
                 pattern_idx_dict[pattern] = len(pattern_idx_dict)
             pattern_idx = pattern_idx_dict[pattern]
+            # Find tids of {A}
             tids = getTidsHavePatternList(patterns=(pattern,), itemTimestampIndexDict=itemTimestampIndexDict)
             tids = tids[0]
             tids_with_pattern = [(t, pattern_idx) for t in tids]
 
             all_tids += tids_with_pattern
-            valid_pattern_idx_list.append(pattern_idx)
+            valid_pattern_idx_list.append(pattern_idx) # At last, this is [1,2,3]. it means <{A}{B}{C}>
 
+            # When joining left, check gap between previous pattern and current pattern
             if not is_right:
                 if prev_idx is not None:
                     # print new_pattern[prev_idx]
                     # print left1_for_right1
                     # print left2_for_right2
                     # print new_pattern[i]
-                    if left1_left2_for_right1_right2 is not None:
+                    if left1_left2_for_right1_right2 is not None: # This state is not rechable code.
                         current_pattern_time = left1_left2_for_right1_right2[i][findIndexWithKey('time_daily', left1_left2_for_right1_right2[i])].split('time_daily:')[1]
                         prev_pattern_time = left1_left2_for_right1_right2[prev_idx][findIndexWithKey('time_daily', left1_left2_for_right1_right2[prev_idx])].split('time_daily:')[1]
                     else:
@@ -164,6 +173,7 @@ def isValidateCombanation(min_sup, left1, left2, pruned_candidate, able_candidat
     if is_right and (left_tids_for_right is None or len(left_tids_for_right) == 0):
         return is_sequence, None, None, None
 
+    # When joining left, find list of tids. For example, In the ABCABDABC, the result of {A}{B}{C} is [(1,2,3), (7,8,9)]
     if not is_right:
         check_pattern_idx = 0
         prev_tid_pattern_idx = None
@@ -173,7 +183,9 @@ def isValidateCombanation(min_sup, left1, left2, pruned_candidate, able_candidat
             for i, tid_with_pattern_idx in enumerate(all_tids[start:]):
                 tid = tid_with_pattern_idx[0]
                 pattern_idx = tid_with_pattern_idx[1]
+                # Check that there(pattern_idx) is expected pattern(check_pattern_idx).
                 if valid_pattern_idx_list[check_pattern_idx] == pattern_idx:
+                    # First pattern or pattern exists in expected gap
                     if prev_tid_pattern_idx is None or (tid - prev_tid_pattern_idx[0]) == (idx_delta_list[check_pattern_idx - 1]):
                         prev_tid_pattern_idx = (tid, pattern_idx)
                         candidate_tids += (tid,)
@@ -185,11 +197,13 @@ def isValidateCombanation(min_sup, left1, left2, pruned_candidate, able_candidat
                             prev_tid_pattern_idx = None
                             break
                     else:
-                        if tid != prev_tid_pattern_idx[0] and i < len(all_tids) - 1 and tid != all_tids[i + 1][0]:
+                        # If gap is larger than expected, restart find at first pattern
+                        if (tid - prev_tid_pattern_idx[0]) > (idx_delta_list[check_pattern_idx - 1]): # tid != prev_tid_pattern_idx[0] and i < len(all_tids) - 1 and tid != all_tids[i + 1][0]:
                             candidate_tids = tuple()
                             check_pattern_idx = 0
                             prev_tid_pattern_idx = None
                             break
+                # Or, initialize to find list of tids
                 else:
                     if check_pattern_idx == 0:
                         candidate_tids = tuple()
@@ -198,9 +212,10 @@ def isValidateCombanation(min_sup, left1, left2, pruned_candidate, able_candidat
                         break
         debug_print("OUTPUT TIDS:" + str(output_tids))
 
+        # Calculating support
         if getSupportFromTids(output_tids, timestampList) >= min_sup:
             is_sequence = True
-
+    # When joining rights
     else:
         pattern_idx_dict = dict()
         valid_pattern_idx_list = list()
@@ -227,6 +242,7 @@ def isValidateCombanation(min_sup, left1, left2, pruned_candidate, able_candidat
             if is_include is True:
                 output_tids.append(left_tids)
         '''
+        # Get gap information from joined left
         left_tids = left_tids_for_right[0]
         idx_delta_list = list()
         prev_tid = None
@@ -257,7 +273,7 @@ def isValidateCombanation(min_sup, left1, left2, pruned_candidate, able_candidat
                             prev_tid_pattern_idx = None
                             break
                     else:
-                        if tid != prev_tid_pattern_idx[0] and i < len(all_tids) - 1 and tid != all_tids[i + 1][0]:
+                        if (tid - prev_tid_pattern_idx[0]) > (idx_delta_list[check_pattern_idx - 1]): # tid != prev_tid_pattern_idx[0] and i < len(all_tids) - 1 and tid != all_tids[i + 1][0]:
                             candidate_tids = tuple()
                             check_pattern_idx = 0
                             prev_tid_pattern_idx = None
@@ -287,6 +303,7 @@ def concatLeftCandidate(k, left_candidates, left1, itemTimestampIndexDict, min_s
 
         left2 = left_candidates[left2_index]
 
+        # Check to be able to merge left
         left_is_sequence, new_left, left_tids, left_gap_list = isValidateCombanation(min_sup, left1, left2, pruned_candidate, able_candidate, timestampList, itemTimestampIndexDict, daily_time_idx_dict, max_gap=max_gap)
 
         # Pruning rule 1 (Remove right combination when left combination is invalid.)
@@ -295,6 +312,7 @@ def concatLeftCandidate(k, left_candidates, left1, itemTimestampIndexDict, min_s
                 right2_candidates = set(left_right_dict[left2])
 
                 for right2 in right2_candidates:
+                    # Check to be able to merge right
                     right_is_sequence, new_right, right_tids, left_gap_list = isValidateCombanation(min_sup, right1, right2, pruned_candidate, able_candidate, timestampList, itemTimestampIndexDict, daily_time_idx_dict, left1_for_right1=left1, left2_for_right2=left2, left_tids_for_right=left_tids, is_right=True, max_gap=max_gap)
                     debug_print("Right Symbol Check: " + str(right_is_sequence))
 
@@ -351,6 +369,7 @@ def concatLeftCandidate(k, left_candidates, left1, itemTimestampIndexDict, min_s
                         # # Pruning rule 3 (Remove left pair that is same with uncombinatable right pair)
                         # pruned_candidate[(right1, right2)] = 1
                         debug_print("Remove uncombinatable right pair in left side")
+                    # Caculating support of new rule `JoinedLeft -> JoinedRight`
                     if left_is_sequence and right_is_sequence:
                         debug_print(">> Rule")
 
@@ -399,7 +418,7 @@ max_gap = 1
 min_sup = 2.0 / 10.0
 min_conf = 2.0 / 10.0
 
-
+# Sorting files as ascending file size
 getall = [[files, os.path.getsize(dir_path + "/" + files)] for files in os.listdir(dir_path)]
 file_info_list = list()
 for file_name, file_size in sorted(getall, key=operator.itemgetter(1)):
@@ -413,10 +432,13 @@ for user_idx, file_info in enumerate(file_info_list):
     print "%d/%d - %s" % (user_idx, len(file_info_list), file_info)
 
     file_path = dir_path + '/%s.pickle' % file_info
+    # Change binary feature to category feature 
     data, file_path = ruduce_category_features.reduce_catergory_feature(file_path, output_dir)
     print data.keys()
+    # Get full data (not removing default value)
     full_data, _ = removed_default_value.removed_default_value(file_path, output_dir, NIGHT_START_TIMESTAMP_STRING='01-00-00', NIGHT_END_TIMESTAMP_STRING='07-00-00', drop_default=False, drop_feature=False, is_full=True)
     print full_data.keys()
+    # Get data removed default data
     data, file_path = removed_default_value.removed_default_value(file_path, output_dir, NIGHT_START_TIMESTAMP_STRING='01-00-00', NIGHT_END_TIMESTAMP_STRING='07-00-00')
 
     timestamps = data[data.keys()[0]].index
@@ -425,11 +447,13 @@ for user_idx, file_info in enumerate(file_info_list):
         # log.write('%s\tNO_CLASS\n' % file_info)
         continue
 
+    # Set to run Association Rule #
     csv_file = output_dir + "/" + file_path.split('/')[-1].split('.')[0] + '_%d.csv' % (granularity_min)
     daily_time_list, tid_to_granualarity_tid = dictToCsv.exportToCSV(data, timestamps, csv_file, include_class=False, granularity_min=granularity_min)
     class_list = getClassFromFile(csv_file)
     inFile = Apriori.dataFromFile(csv_file, hasClass=False)
     print "Complete Read CSV for Apriori"
+    # End Association Rule#
 
     ''' START GETTING MCPP '''
 
@@ -444,7 +468,9 @@ for user_idx, file_info in enumerate(file_info_list):
     test_combination_cnt = 0
     pattern_all_tids = dict()
 
+    # All Rules
     ALL_RULE_PATH = rules_dir + "/" + file_path.split('/')[-1].split('.')[0] + '_MCPP_%d_%.2f_%.2f.pickle' % (granularity_min, min_sup, min_conf)
+    # Remove superset rules (If there are <{A},{B}>-><{C},{D}>, <{A}>-><{C}>, remove <{A}>-><{C}>)
     ALL_UNIQUE_PATH = rules_dir + "/" + file_path.split('/')[-1].split('.')[0] + '_UNIQUE_MCPP_%d_%.2f_%.2f.pickle' % (granularity_min, min_sup, min_conf)
     APRIORI_RESULT_PATH = rules_dir + "/" + file_path.split('/')[-1].split('.')[0] + '_MCPP_1_%d_%.2f_%.2f.pickle' % (granularity_min, min_sup, min_conf)
 
@@ -469,6 +495,7 @@ for user_idx, file_info in enumerate(file_info_list):
     if not existRules:
         items, rules_1, itemTimestampIndexDict, timestampList = Apriori.runApriori(inFile, min_sup, min_conf, tid_to_granualarity_tid, granularity_min)
 
+        # Change time interval to granularity_min (If granularity_min=30, 11:27 -> 11:30)
         granularityTimestampList = set()
         for timestamp in timestampList:
             granularity_timestamp = pd.DatetimeIndex(((np.round(pd.DatetimeIndex([timestamp]).asi8 / (1e9 * 60 * granularity_min))) * 1e9 * 60 * granularity_min).astype(np.int64))[0]
@@ -515,7 +542,7 @@ for user_idx, file_info in enumerate(file_info_list):
 
         print "Building LEFT1, RIGHT1 relationship"
 
-        """ Get Closed Patterns """
+        # Fill pattern information
         all_mcpp_1 = list()
         for i, (rule, confidence, support) in enumerate(rules_1):
             if rule[0] != (('*:*',),):
@@ -553,6 +580,7 @@ for user_idx, file_info in enumerate(file_info_list):
             rule = (left, right, list(left_tids), list(both_tids), support, confidence, list(right_tids), left_support, right_support)
             all_mcpp_1.append(rule)
 
+        # Get closed patterns (If {A,B} -> {C} and {A} -> {C}, then remove {A} -> {C})
         removed_mcpp_list = list()
         for candidate_non_closed_mcpp in all_mcpp_1:
             for candidate_closed_mcpp in all_mcpp_1:
@@ -585,6 +613,7 @@ for user_idx, file_info in enumerate(file_info_list):
             all_rule_list.append(rule)
             rules.append(rule)
 
+            # Construct graph for sequence exapansion
             if left not in left_right_dict:
                 left_right_dict[left] = list()
             left_right_dict[left].append(right)
@@ -622,9 +651,10 @@ for user_idx, file_info in enumerate(file_info_list):
             # new_rules = list()
             sorted_left1 = sorted(left1_candidates.keys(), key=lambda x: len(left_right_dict[x]), reverse=True)
             all_rules = list()
-            next_rules = list()
-            valid_rules = list()
+            next_rules = list() # Save rules in concatLeftCandidate
+            valid_rules = list() # Same with next_rules (unnecessary variable)
 
+            # Left Expansion
             for i, left1 in enumerate(sorted_left1):
                 concatLeftCandidate(k, sorted_left1, left1, itemTimestampIndexDict, min_sup, min_conf, granularityTimestampList, next_rules, valid_rules, daily_time_idx_dict, max_gap=max_gap)
                 if i % 100 == 0:
@@ -650,6 +680,7 @@ for user_idx, file_info in enumerate(file_info_list):
                 unique_candidate_rules[(left, right)] = rule
                 all_rule_list.append(rule)
 
+                # Construct graph for sequence exapansion
                 if left not in left_right_dict:
                     left_right_dict[left] = list()
                 left_right_dict[left].append(right)
