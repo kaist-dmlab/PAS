@@ -120,7 +120,13 @@ def isValidateCombanation(min_sup, left1, left2, pruned_candidate, able_candidat
             return is_sequence, None, [], None
 
     # Calculate upper bound
-    upper_bound = getUpperBoundSupport(left1, left2, not is_right)
+    if pattern_len > 1 and not is_right:
+        print '>>>>'
+        print left1
+        print left2
+        print is_right
+        print '<<<<'
+        upper_bound = getUpperBoundSupport(left1, left2, not is_right)
 
 
     left1_left2_for_right1_right2 = None
@@ -310,20 +316,21 @@ def isSupersetPattern(subset_pattern, superset_pattern):
     if (len(subset_pattern) != len(superset_pattern)):
         print 'Subset and superset pattern have to be same length'
         return False
-    print 'Check following two patterns'
-    print subset_pattern
-    print superset_pattern
+    # print 'Check following two patterns'
+    # print subset_pattern
+    # print superset_pattern
     is_superset = False
-    for idx in len(subset_pattern):
+    for idx in range(len(subset_pattern)):
         subset_item = set(subset_pattern[idx])
         superset_item = set(superset_pattern[idx])
-        print subset_item
-        print superset_item
-        if subset_item.issubset(superset_item):
+        # print subset_item
+        # print superset_item
+        if subset_item != superset_item and subset_item.issubset(superset_item):
             is_superset = True
         else:
             is_superset = False
             break
+    # print is_superset
     return is_superset
 
 def getSupportFromPrevRules(pattern):
@@ -343,13 +350,25 @@ def getUpperBoundSupport(pattern1, pattern2, is_antecedent):
     
     # Naive Method
 
+    # print "pattern 1: " + str(pattern1)
+    # print "pattern 2: " + str(pattern2)
+
     pattern1_supp = getSupportFromPrevRules(pattern1)
     pattern2_supp = getSupportFromPrevRules(pattern2)
     upper_bound = min(pattern1_supp, pattern2_supp)
 
+    # print pattern1_supp
+    # print pattern2_supp
+    # print upper_bound
+
+    if len(pattern1) == 1:
+        return upper_bound
+
     # Get common pattern C
     pattern_len = len(pattern2)
     common_pattern = pattern2[:pattern_len - 1]
+
+    # print common_pattern
 
     # Find supp(A,C) and supp(B,C)
     superset_common_pattern_to_superset_pair_support = dict()
@@ -383,14 +402,21 @@ def getUpperBoundSupport(pattern1, pattern2, is_antecedent):
                 max_diff_pair = diff_pair
                 max_superset_pair_support = superset_pair_support
 
-    print "Max superset pair support"
-    print max_superset_pair_support
-    print max_diff_pair
+    # print "Max superset pair support"
+    # print max_superset_pair_support
+    # print max_diff_pair
 
     # Calculate upper bound
     # upper_bound - min(|supp(A,C) - supp(C,B)|, upper_bound - min(supp(A,C),supp(C,B)))
     if max_superset_pair_support is not None:
         upper_bound = upper_bound - min(max_diff_pair, upper_bound - min(max_superset_pair_support[0][1], max_superset_pair_support[1][1]))
+    if max_superset_pair_support is not None:
+        print pattern1
+        print pattern2
+        print pattern1_supp
+        print pattern2_supp
+        print max_superset_pair_support
+        print "Upper Bound: " + str(upper_bound)
     return upper_bound
 
 def concatLeftCandidate(k, left_candidates, left1, itemTimestampIndexDict, min_sup, min_conf, timestampList, nextRules, validRules, daily_time_idx_dict, max_partial_len):
