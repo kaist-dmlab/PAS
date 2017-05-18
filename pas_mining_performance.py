@@ -57,6 +57,8 @@ def isValidateCombanation(min_sup, left1, left2, pruned_candidate, able_candidat
     global test_combination_cnt
     global pattern_all_tids
 
+    start_method_time = time.time()
+
     debug_print("Join Check\t" + str(left1) + "\t" + str(left2))
     if not is_right:
         sequence_key = ('left', left1, left2, None)
@@ -121,14 +123,12 @@ def isValidateCombanation(min_sup, left1, left2, pruned_candidate, able_candidat
 
     # Calculate upper bound
     upper_bound = None
+    upper_time = None
     if pattern_len > 1 and not is_right:
-        print '>>>>'
-        print left1
-        print left2
-        print is_right
-        print '<<<<'
-        upper_bound = getUpperBoundSupport(left1, left2, not is_right)
-
+        upper_start_ts = time.time()
+        upper_bound, upper_bound_info = getUpperBoundSupport(left1, left2, not is_right)
+        upper_end_ts = time.time()
+        upper_time = upper_end_ts - upper_start_ts
 
     left1_left2_for_right1_right2 = None
     if left1_for_right1 is not None and left2_for_right2 is not None:
@@ -318,6 +318,11 @@ def isValidateCombanation(min_sup, left1, left2, pruned_candidate, able_candidat
     else:
         able_candidate[sequence_key] = (new_pattern, output_tids)
 
+    end_method_time = time.time()
+
+    if upper_bound is not None:
+        F_UPPER.write("\t".join(str(i) for i in list(upper_bound_info)) + "\t" + str(upper_time) + "\t" + str(end_method_time - start_method_time) + "\n")
+
     return is_sequence, new_pattern, output_tids, idx_delta_list
 
 def isSupersetPattern(subset_pattern, superset_pattern):
@@ -371,7 +376,7 @@ def getUpperBoundSupport(pattern1, pattern2, is_antecedent):
     # print upper_bound
 
     if len(pattern1) == 1:
-        return upper_bound
+        return upper_bound, None
 
     # Get common pattern C
     pattern_len = len(pattern2)
@@ -433,7 +438,7 @@ def getUpperBoundSupport(pattern1, pattern2, is_antecedent):
         print pattern2_supp
         print max_superset_pair_support
         print "Upper Bound: " + str(upper_bound)
-    return upper_bound
+    return upper_bound, (pattern1, pattern2, pattern1_supp, pattern2_supp, upper_bound, max_superset_pair_support)
 
 def concatLeftCandidate(k, left_candidates, left1, itemTimestampIndexDict, min_sup, min_conf, timestampList, nextRules, validRules, daily_time_idx_dict, max_partial_len):
     for left2_index in range(len(left_candidates)):
@@ -589,6 +594,7 @@ granularity_min = 60
 MIN_DATE_LENGTH = 30
 
 # log = open('user_log.txt', 'w')
+F_UPPER = open('output/upper_bound_result.txt', 'w')
 F_PERFORM = open('output/performance_result.txt', 'w')
 file_info_list = file_info_list[start_idx:end_idx]
 for user_idx, file_info in enumerate(file_info_list):
@@ -618,7 +624,7 @@ for user_idx, file_info in enumerate(file_info_list):
     # min_sup = 1.0 / 10.0
     # min_conf = 2.0 / 10.0
     for try_idx in range(1):
-        for performance_type in ['conf', 'sup', 'partial']:
+        for performance_type in ['conf']: # , 'sup', 'partial']: Only once
             if performance_type == 'conf':
                 min_sup = 10 / 100.0
                 min_conf = 10 / 100.0
@@ -633,7 +639,7 @@ for user_idx, file_info in enumerate(file_info_list):
                 max_partial_len = 1
             is_stop = False
             while not is_stop:
-                for PRUNING_RULE1_ON, PRUNING_RULE2_ON, PRUNING_RULE3_ON in [(True, True, False), (False, True, False), (True, False, False), (False, False, False)]:
+                for PRUNING_RULE1_ON, PRUNING_RULE2_ON, PRUNING_RULE3_ON in [(True, True, False)]: #, (False, True, False), (True, False, False), (False, False, False)]: Only once
                     print ">>>>>> min_sup: %f, min_conf: %f, max_partial_len: %d <<<<<<" % (min_sup, min_conf, max_partial_len)
                     print "Pruning Rule (Foward Stop + Prune, Backward Prune): %s, %s" % (PRUNING_RULE1_ON, PRUNING_RULE2_ON)
                     # f_entropy_result_pickle = open('entropy_result/%s_pattern_pair_entropy_%.2f_%.2f.pickle' % (file_info, min_sup, min_conf), 'w')
@@ -1034,6 +1040,7 @@ for user_idx, file_info in enumerate(file_info_list):
                     ALL_ENDTIME = time.time()
                     F_PERFORM.write('%s\t%s\t%s\t%f\t%f\t%d\t%s\t%s\t%f\n' % (file_info, performance_type, 'ALL', min_sup, min_conf, max_partial_len, PRUNING_RULE1_ON, PRUNING_RULE2_ON, ALL_ENDTIME - ALL_STARTTIME))
                     print "All Time: %f" % (ALL_ENDTIME - ALL_STARTTIME)
+                is_stop = True # Only once
                 if performance_type == 'conf':
                     if min_conf >= (60 / 100.0):
                         is_stop = True
@@ -1049,5 +1056,5 @@ for user_idx, file_info in enumerate(file_info_list):
                         is_stop = True
                     max_partial_len = max_partial_len + 1
                     print min_sup
-
+F_UPPER.close()
 # log.close()
