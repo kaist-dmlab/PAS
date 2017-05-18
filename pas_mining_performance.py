@@ -119,6 +119,10 @@ def isValidateCombanation(min_sup, left1, left2, pruned_candidate, able_candidat
         else:
             return is_sequence, None, [], None
 
+    # Calculate upper bound
+    upper_bound = getUpperBoundSupport(left1, left2, not is_right)
+
+
     left1_left2_for_right1_right2 = None
     if left1_for_right1 is not None and left2_for_right2 is not None:
         if pattern_len == 1:
@@ -301,6 +305,93 @@ def isValidateCombanation(min_sup, left1, left2, pruned_candidate, able_candidat
 
     return is_sequence, new_pattern, output_tids, idx_delta_list
 
+def isSupersetPattern(subset_pattern, superset_pattern):
+    # subset_pattern: {A,B}{C,D}, superset_pattern: {A,B,E}{C,D,F}
+    if (len(subset_pattern) != len(superset_pattern)):
+        print 'Subset and superset pattern have to be same length'
+        return False
+    print 'Check following two patterns'
+    print subset_pattern
+    print superset_pattern
+    is_superset = False
+    for idx in len(subset_pattern):
+        subset_item = set(subset_pattern[idx])
+        superset_item = set(superset_pattern[idx])
+        print subset_item
+        print superset_item
+        if subset_item.issubset(superset_item):
+            is_superset = True
+        else:
+            is_superset = False
+            break
+    return is_superset
+
+def getSupportFromPrevRules(pattern):
+    for prev_rule in prev_rules:
+        if pattern == prev_rule[0]:
+            return prev_rule[7]
+        elif pattern == prev_rule[1]:
+            # TODO Need to check gap
+            return prev_rule[8]
+
+def getUpperBoundSupport(pattern1, pattern2, is_antecedent):
+    # Rule Info: (new_left, new_right, left_tids, new_both_tids, support, confidence, right_tids, left_support, right_support)  # , new_left_symbol, new_right_symbol)
+    if is_antecedent:
+        pattern_type = 0
+    else:
+        pattern_type = 1
+    
+    # Naive Method
+
+    pattern1_supp = getSupportFromPrevRules(pattern1)
+    pattern2_supp = getSupportFromPrevRules(pattern2)
+    upper_bound = min(pattern1_supp, pattern2_supp)
+
+    # Get common pattern C
+    pattern_len = len(pattern2)
+    common_pattern = pattern2[:pattern_len - 1]
+
+    # Find supp(A,C) and supp(B,C)
+    superset_common_pattern_to_superset_pair_support = dict()
+    for prev_rule in prev_rules:
+        candidate_pattern = prev_rule[pattern_type]
+        if (candidate_pattern[0] == pattern1[0] and isSupersetPattern(common_pattern, candidate_pattern[-(pattern_len - 1):])):
+            common_superset_pattern = candidate_pattern[-(pattern_len - 1):]
+            # supp(A,C)
+            pattern1_common_pattern_supp = prev_rule[pattern_type + 7]
+            if not common_superset_pattern in superset_common_pattern_to_superset_pair_support:
+                superset_common_pattern_to_superset_pair_support[common_superset_pattern] = dict()
+            superset_common_pattern_to_superset_pair_support[common_superset_pattern][0] = (candidate_pattern, pattern1_common_pattern_supp)
+        
+        if (candidate_pattern[-1] == pattern2[-1] and isSupersetPattern(common_pattern, candidate_pattern[:pattern_len - 1])):
+            common_superset_pattern = candidate_pattern[:pattern_len - 1]
+            # supp(C,B)
+            pattern2_common_pattern_supp = prev_rule[pattern_type + 7]
+            if not common_superset_pattern in superset_common_pattern_to_superset_pair_support:
+                superset_common_pattern_to_superset_pair_support[common_superset_pattern] = dict()
+            superset_common_pattern_to_superset_pair_support[common_superset_pattern][1] = (candidate_pattern, pattern2_common_pattern_supp)
+    
+    # Find C maximizing |supp(A,C) - supp(C,B)| 
+    max_diff_pair = 0
+    max_superset_pair_support = None
+    for superset_common_pattern in superset_common_pattern_to_superset_pair_support:
+        superset_pair_support = superset_common_pattern_to_superset_pair_support[superset_common_pattern]
+        if len(superset_pair_support.keys()) == 2:
+            print superset_common_pattern
+            diff_pair = abs(superset_pair_support[0][1] - superset_pair_support[1][1])
+            if max_diff_pair < diff_pair:
+                max_diff_pair = diff_pair
+                max_superset_pair_support = superset_pair_support
+
+    print "Max superset pair support"
+    print max_superset_pair_support
+    print max_diff_pair
+
+    # Calculate upper bound
+    # upper_bound - min(|supp(A,C) - supp(C,B)|, upper_bound - min(supp(A,C),supp(C,B)))
+    if max_superset_pair_support is not None:
+        upper_bound = upper_bound - min(max_diff_pair, upper_bound - min(max_superset_pair_support[0][1], max_superset_pair_support[1][1]))
+    return upper_bound
 
 def concatLeftCandidate(k, left_candidates, left1, itemTimestampIndexDict, min_sup, min_conf, timestampList, nextRules, validRules, daily_time_idx_dict, max_partial_len):
     for left2_index in range(len(left_candidates)):
@@ -660,11 +751,14 @@ for user_idx, file_info in enumerate(file_info_list):
                         print "Remove Closed Time: %f" % (time.time() - aaa)
 
                         bbb = time.time()
+                        
                         rules_1 = list()
                         for mcpp in all_mcpp_1:
                             if mcpp not in removed_mcpp_list:
                                 rules_1.append(mcpp)
-
+                        
+                        rules_1 = all_mcpp_1
+                        next_rules = rules_1
                         for i, rule in enumerate(rules_1):
                             left = rule[0]
                             right = rule[1]
@@ -719,6 +813,7 @@ for user_idx, file_info in enumerate(file_info_list):
                             start_ts = time.time()
                             sorted_left1 = sorted(left1_candidates.keys(), key=lambda x: len(left_right_dict[x]), reverse=True)
                             all_rules = list()
+                            prev_rules = list(next_rules)
                             next_rules = list()
                             valid_rules = list()
 
