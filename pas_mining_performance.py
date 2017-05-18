@@ -120,6 +120,7 @@ def isValidateCombanation(min_sup, left1, left2, pruned_candidate, able_candidat
             return is_sequence, None, [], None
 
     # Calculate upper bound
+    upper_bound = None
     if pattern_len > 1 and not is_right:
         print '>>>>'
         print left1
@@ -230,7 +231,10 @@ def isValidateCombanation(min_sup, left1, left2, pruned_candidate, able_candidat
                         break
         debug_print("OUTPUT TIDS:" + str(output_tids))
 
-        if getSupportFromTids(output_tids, timestampList) >= min_sup:
+        next_pattern_support = getSupportFromTids(output_tids, timestampList)
+        next_pattern_to_support[new_pattern] = next_pattern_support #TODO: Gap
+
+        if next_pattern_support >= min_sup:
             is_sequence = True
 
     else:
@@ -301,8 +305,13 @@ def isValidateCombanation(min_sup, left1, left2, pruned_candidate, able_candidat
                         prev_tid_pattern_idx = None
                         break
 
-        if getSupportFromTids(output_tids, timestampList) >= min_sup:
+        next_pattern_support = getSupportFromTids(output_tids, timestampList)
+        next_pattern_to_support[new_pattern] = next_pattern_support #TODO: Gap
+        if next_pattern_support >= min_sup:
             is_sequence = True
+
+    if upper_bound is not None:
+        print "Support: " + str(next_pattern_support)
 
     if not is_sequence:
         pruned_candidate[sequence_key] = 1
@@ -372,12 +381,12 @@ def getUpperBoundSupport(pattern1, pattern2, is_antecedent):
 
     # Find supp(A,C) and supp(B,C)
     superset_common_pattern_to_superset_pair_support = dict()
-    for prev_rule in prev_rules:
-        candidate_pattern = prev_rule[pattern_type]
+    for prev_pattern in prev_pattern_to_support:
+        candidate_pattern = prev_pattern
         if (candidate_pattern[0] == pattern1[0] and isSupersetPattern(common_pattern, candidate_pattern[-(pattern_len - 1):])):
             common_superset_pattern = candidate_pattern[-(pattern_len - 1):]
             # supp(A,C)
-            pattern1_common_pattern_supp = prev_rule[pattern_type + 7]
+            pattern1_common_pattern_supp = prev_pattern_to_support[prev_pattern]
             if not common_superset_pattern in superset_common_pattern_to_superset_pair_support:
                 superset_common_pattern_to_superset_pair_support[common_superset_pattern] = dict()
             superset_common_pattern_to_superset_pair_support[common_superset_pattern][0] = (candidate_pattern, pattern1_common_pattern_supp)
@@ -385,7 +394,7 @@ def getUpperBoundSupport(pattern1, pattern2, is_antecedent):
         if (candidate_pattern[-1] == pattern2[-1] and isSupersetPattern(common_pattern, candidate_pattern[:pattern_len - 1])):
             common_superset_pattern = candidate_pattern[:pattern_len - 1]
             # supp(C,B)
-            pattern2_common_pattern_supp = prev_rule[pattern_type + 7]
+            pattern2_common_pattern_supp = prev_pattern_to_support[prev_pattern]
             if not common_superset_pattern in superset_common_pattern_to_superset_pair_support:
                 superset_common_pattern_to_superset_pair_support[common_superset_pattern] = dict()
             superset_common_pattern_to_superset_pair_support[common_superset_pattern][1] = (candidate_pattern, pattern2_common_pattern_supp)
@@ -820,6 +829,13 @@ for user_idx, file_info in enumerate(file_info_list):
                         print "MCPP 1 after processing final: %f" % (time.time() - bbb)
                         print "MCPP 1 Other Time: %f" % (time.time() - tatatata)
 
+                        # Save support information of each pattern(item)
+                        next_pattern_to_support = dict()
+                        for item in items:
+                            pattern = (item[0],)
+                            support = item[1]
+                            next_pattern_to_support[pattern] = support
+                        
                         k = 1
                         while True:
                             k += 1
@@ -842,6 +858,9 @@ for user_idx, file_info in enumerate(file_info_list):
                             prev_rules = list(next_rules)
                             next_rules = list()
                             valid_rules = list()
+                                
+                            prev_pattern_to_support = dict(next_pattern_to_support)
+                            next_pattern_to_support = dict()
 
                             ttt1 = time.time()
                             for i, left1 in enumerate(sorted_left1):
