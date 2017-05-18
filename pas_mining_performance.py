@@ -416,9 +416,16 @@ def getUpperBoundSupport(pattern1, pattern2, is_antecedent):
     # print max_diff_pair
 
     # Calculate upper bound
-    # upper_bound - min(|supp(A,C) - supp(C,B)|, upper_bound - min(supp(A,C),supp(C,B)))
+    # if supp(B) > supp(A)
+    # min(supp(A,C), supp(C,B)) + min(supp(B) - max(0, supp(C,B) - supp(A,C)), upper_bound) - supp(A)
     if max_superset_pair_support is not None:
-        upper_bound = upper_bound - min(max_diff_pair, upper_bound - min(max_superset_pair_support[0][1], max_superset_pair_support[1][1]))
+        pattern1_common_pattern_supp = max_superset_pair_support[0][1]
+        pattern2_common_pattern_supp = max_superset_pair_support[1][1]
+        if pattern1_supp < pattern2_supp:
+            upper_bound = min(pattern1_common_pattern_supp, pattern2_common_pattern_supp) + min(pattern2_supp - max(0, pattern2_common_pattern_supp - pattern1_common_pattern_supp), upper_bound) - pattern1_common_pattern_supp
+        else:
+            upper_bound = min(pattern1_common_pattern_supp, pattern2_common_pattern_supp) + min(pattern1_supp - max(0, pattern1_common_pattern_supp - pattern2_common_pattern_supp), upper_bound) - pattern2_common_pattern_supp
+
     if max_superset_pair_support is not None:
         print pattern1
         print pattern2
