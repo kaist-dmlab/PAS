@@ -339,22 +339,24 @@ def getIsSupersetPatternWithAddedPattern(subset_pattern, superset_pattern):
         if subset_pattern_idx < len(subset_pattern):
             subset_item = set(subset_pattern[subset_pattern_idx])
             superset_item = set(superset_pattern[superset_pattern_idx])
-            if subset_item != superset_pattern:
+            if subset_item != superset_item:
                 unsame_superset_pattern_idx_list.append(superset_pattern_idx)
             if subset_item == superset_item or subset_item.issubset(superset_item): # Check subset
                 subset_pattern_idx += 1                    
         else:
             unsame_superset_pattern_idx_list.append(superset_pattern_idx)
 
-    if subset_pattern_idx == len(subset_pattern):
+    added_pattern = list() # Pattern C in P(A,C)
+    for unsame_superset_pattern_idx in unsame_superset_pattern_idx_list:
+        added_pattern.append(superset_pattern[unsame_superset_pattern_idx])
+
+    if subset_pattern_idx == len(subset_pattern) and len(added_pattern) > 0: # If added_pattern is empty, this is same pattern
         is_superset = True
     else:
         is_superset = False
     # print is_superset
-    candidate_pattern = list() # Pattern C in P(A,C)
-    for unsame_superset_pattern_idx in unsame_superset_pattern_idx_list:
-        candidate_pattern.append(superset_pattern[unsame_superset_pattern_idx])
-    return is_superset, candidate_pattern
+
+    return is_superset, tuple(added_pattern)
 
 def getSupportFromPrevRules(pattern):
     for prev_rule in prev_rules:
@@ -418,7 +420,12 @@ def getUpperBoundSupport(pattern1, pattern2, is_antecedent):
     for superset_common_pattern in superset_common_pattern_to_superset_pair_support:
         superset_pair_support = superset_common_pattern_to_superset_pair_support[superset_common_pattern]
         if len(superset_pair_support.keys()) == 2:
+            print "--------------------------------"
+            print pattern1
+            print pattern2
             print superset_common_pattern
+            print superset_pair_support[0][0]
+            print superset_pair_support[1][0]
             diff_pair = abs(superset_pair_support[0][1] - superset_pair_support[1][1])
             if max_diff_pair < diff_pair:
                 max_diff_pair = diff_pair
