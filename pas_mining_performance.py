@@ -325,27 +325,36 @@ def isValidateCombanation(min_sup, left1, left2, pruned_candidate, able_candidat
 
     return is_sequence, new_pattern, output_tids, idx_delta_list
 
-def isSupersetPattern(subset_pattern, superset_pattern):
+def getIsSupersetPatternWithAddedPattern(subset_pattern, superset_pattern):
     # subset_pattern: {A,B}{C,D}, superset_pattern: {A,B,E}{C,D,F}
-    if (len(subset_pattern) != len(superset_pattern)):
-        print 'Subset and superset pattern have to be same length'
-        return False
+    # subset_pattern: {A,B}{C,D}, superset_pattern: {A,B}{C,D}{E,F}
+    # subset_pattern: {A,B}{C,D}, superset_pattern: {A,B}{E,F}{C,D}
+
     # print 'Check following two patterns'
     # print subset_pattern
     # print superset_pattern
-    is_superset = False
-    for idx in range(len(subset_pattern)):
-        subset_item = set(subset_pattern[idx])
-        superset_item = set(superset_pattern[idx])
-        # print subset_item
-        # print superset_item
-        if subset_item != superset_item and subset_item.issubset(superset_item):
-            is_superset = True
+    subset_pattern_idx = 0
+    unsame_superset_pattern_idx_list = list()
+    for superset_pattern_idx in range(len(superset_pattern)):
+        if subset_pattern_idx < len(subset_pattern):
+            subset_item = set(subset_pattern[subset_pattern_idx])
+            superset_item = set(superset_pattern[superset_pattern_idx])
+            if subset_item != superset_pattern:
+                unsame_superset_pattern_idx_list.append(superset_pattern_idx)
+            if subset_item == superset_item or subset_item.issubset(superset_item): # Check subset
+                subset_pattern_idx += 1                    
         else:
-            is_superset = False
-            break
+            unsame_superset_pattern_idx_list.append(superset_pattern_idx)
+
+    if subset_pattern_idx == len(subset_pattern):
+        is_superset = True
+    else:
+        is_superset = False
     # print is_superset
-    return is_superset
+    candidate_pattern = list() # Pattern C in P(A,C)
+    for unsame_superset_pattern_idx in unsame_superset_pattern_idx_list:
+        candidate_pattern.append(superset_pattern[unsame_superset_pattern_idx])
+    return is_superset, candidate_pattern
 
 def getSupportFromPrevRules(pattern):
     for prev_rule in prev_rules:
@@ -384,25 +393,24 @@ def getUpperBoundSupport(pattern1, pattern2, is_antecedent):
 
     # print common_pattern
 
-    # Find supp(A,C) and supp(B,C)
+    # Find supp(A,C) and supp(C,B) where C is `added_pattern`.
     superset_common_pattern_to_superset_pair_support = dict()
     for prev_pattern in prev_pattern_to_support:
-        candidate_pattern = prev_pattern
-        if (candidate_pattern[0] == pattern1[0] and isSupersetPattern(common_pattern, candidate_pattern[-(pattern_len - 1):])):
-            common_superset_pattern = candidate_pattern[-(pattern_len - 1):]
+        candidate_pattern = prev_pattern # It can be supp(A,C) or supp(C,B).
+        candidate_pattern_supp = prev_pattern_to_support[candidate_pattern]
+        is_superset_of_pattern1, added_pattern_of_pattern1 = getIsSupersetPatternWithAddedPattern(pattern1, candidate_pattern)
+        if is_superset_of_pattern1:
             # supp(A,C)
-            pattern1_common_pattern_supp = prev_pattern_to_support[prev_pattern]
-            if not common_superset_pattern in superset_common_pattern_to_superset_pair_support:
-                superset_common_pattern_to_superset_pair_support[common_superset_pattern] = dict()
-            superset_common_pattern_to_superset_pair_support[common_superset_pattern][0] = (candidate_pattern, pattern1_common_pattern_supp)
-        
-        if (candidate_pattern[-1] == pattern2[-1] and isSupersetPattern(common_pattern, candidate_pattern[:pattern_len - 1])):
-            common_superset_pattern = candidate_pattern[:pattern_len - 1]
+            if not added_pattern_of_pattern1 in superset_common_pattern_to_superset_pair_support:
+                superset_common_pattern_to_superset_pair_support[added_pattern_of_pattern1] = dict()
+            superset_common_pattern_to_superset_pair_support[added_pattern_of_pattern1][0] = (candidate_pattern, candidate_pattern_supp)
+
+        is_superset_of_pattern2, added_pattern_of_pattern2 = getIsSupersetPatternWithAddedPattern(pattern2, candidate_pattern)
+        if is_superset_of_pattern2:
             # supp(C,B)
-            pattern2_common_pattern_supp = prev_pattern_to_support[prev_pattern]
-            if not common_superset_pattern in superset_common_pattern_to_superset_pair_support:
-                superset_common_pattern_to_superset_pair_support[common_superset_pattern] = dict()
-            superset_common_pattern_to_superset_pair_support[common_superset_pattern][1] = (candidate_pattern, pattern2_common_pattern_supp)
+            if not added_pattern_of_pattern2 in superset_common_pattern_to_superset_pair_support:
+                superset_common_pattern_to_superset_pair_support[added_pattern_of_pattern2] = dict()
+            superset_common_pattern_to_superset_pair_support[added_pattern_of_pattern2][1] = (candidate_pattern, candidate_pattern_supp)
     
     # Find C maximizing |supp(A,C) - supp(C,B)| 
     max_diff_pair = 0
