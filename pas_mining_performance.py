@@ -321,7 +321,7 @@ def isValidateCombanation(min_sup, left1, left2, pruned_candidate, able_candidat
     end_method_time = time.time()
 
     if upper_bound is not None:
-        F_UPPER.write("\t".join(str(i) for i in list(upper_bound_info)) + "\t" + str(upper_time) + "\t" + str(end_method_time - start_method_time) + "\n")
+        F_UPPER.write(str(next_pattern_support) + "\t" + "\t".join(str(i) for i in list(upper_bound_info)) + "\t" + str(upper_time) + "\t" + str(end_method_time - start_method_time) + "\n")
 
     return is_sequence, new_pattern, output_tids, idx_delta_list
 
