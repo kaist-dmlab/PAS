@@ -424,12 +424,12 @@ def getUpperBoundSupport(pattern1, pattern2, is_antecedent):
     for superset_common_pattern in superset_common_pattern_to_superset_pair_support:
         superset_pair_support = superset_common_pattern_to_superset_pair_support[superset_common_pattern]
         if len(superset_pair_support.keys()) == 2:
-            print "--------------------------------"
-            print pattern1
-            print pattern2
-            print superset_common_pattern
-            print superset_pair_support[0][0]
-            print superset_pair_support[1][0]
+            # print "--------------------------------"
+            # print pattern1
+            # print pattern2
+            # print superset_common_pattern
+            # print superset_pair_support[0][0]
+            # print superset_pair_support[1][0]
             diff_pair = abs(superset_pair_support[0][1] - superset_pair_support[1][1])
             if max_diff_pair < diff_pair:
                 max_diff_pair = diff_pair
@@ -450,6 +450,7 @@ def getUpperBoundSupport(pattern1, pattern2, is_antecedent):
         else:
             upper_bound = min(pattern1_common_pattern_supp, pattern2_common_pattern_supp) + min(pattern1_supp - max(0, pattern1_common_pattern_supp - pattern2_common_pattern_supp), upper_bound) - pattern2_common_pattern_supp
 
+    '''
     if max_superset_pair_support is not None:
         print pattern1
         print pattern2
@@ -457,6 +458,7 @@ def getUpperBoundSupport(pattern1, pattern2, is_antecedent):
         print pattern2_supp
         print max_superset_pair_support
         print "Upper Bound: " + str(upper_bound)
+    '''
     return upper_bound, (pattern1, pattern2, pattern1_supp, pattern2_supp, upper_bound, max_superset_pair_support)
 
 def concatLeftCandidate(k, left_candidates, left1, itemTimestampIndexDict, min_sup, min_conf, timestampList, nextRules, validRules, daily_time_idx_dict, max_partial_len):
@@ -561,7 +563,7 @@ def concatLeftCandidate(k, left_candidates, left1, itemTimestampIndexDict, min_s
         tt2 = time.time()
 
 
-def calculateUpperBoundSupport(k, left_candidates, left1, itemTimestampIndexDict, min_sup, min_conf, timestampList, nextRules, validRules, daily_time_idx_dict, max_partial_len):
+def calculateUpperBoundSupport(left_candidates, left1, is_right = False):
     for left2_index in range(len(left_candidates)):
         debug_print("--------------------------------")
         debug_print("Given Left1: " + str(left1))
@@ -601,8 +603,9 @@ def calculateUpperBoundSupport(k, left_candidates, left1, itemTimestampIndexDict
             print "-----------------"
             print left1
             print left2
-            print upper_bound
+            print min(upper_bound_info[2], upper_bound_info[3]), upper_bound
             print upper_bound_info
+            print "-----------------"
 
         tttt2 = time.time()
 
@@ -940,7 +943,8 @@ for user_idx, file_info in enumerate(file_info_list):
                             next_pattern_to_support = dict()
 
                             # TODO: Update upper bound support until upper bound is not changed.
-                            calculateUpperBoundSupport(k, sorted_left1, left1, itemTimestampIndexDict, min_sup, min_conf, granularityTimestampList, next_rules, valid_rules, daily_time_idx_dict, max_partial_len=max_partial_len)
+                            for i, left1 in enumerate(sorted_left1):
+                                calculateUpperBoundSupport(sorted_left1, left1)
 
                             ttt1 = time.time()
                             for i, left1 in enumerate(sorted_left1):
