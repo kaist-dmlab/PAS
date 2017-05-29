@@ -325,6 +325,10 @@ def isValidateCombanation(min_sup, left1, left2, pruned_candidate, able_candidat
 
     return is_sequence, new_pattern, output_tids, idx_delta_list
 
+
+
+
+
 def getIsSupersetPatternWithAddedPattern(subset_pattern, superset_pattern):
     # subset_pattern: {A,B}{C,D}, superset_pattern: {A,B,E}{C,D,F}
     # subset_pattern: {A,B}{C,D}, superset_pattern: {A,B}{C,D}{E,F}
@@ -556,6 +560,51 @@ def concatLeftCandidate(k, left_candidates, left1, itemTimestampIndexDict, min_s
                         debug_print("-------------")
         tt2 = time.time()
 
+
+def calculateUpperBoundSupport(k, left_candidates, left1, itemTimestampIndexDict, min_sup, min_conf, timestampList, nextRules, validRules, daily_time_idx_dict, max_partial_len):
+    for left2_index in range(len(left_candidates)):
+        debug_print("--------------------------------")
+        debug_print("Given Left1: " + str(left1))
+
+        left2 = left_candidates[left2_index]
+
+        tttt1 = time.time()
+
+        debug_print("LEFT1: " + str(left1))
+        debug_print("LEFT2: " + str(left2))
+
+        pattern_len = len(left1)
+        if pattern_len == 1:
+            left1_time_daily_index = findIndexWithKey('time_daily', left1[0])
+            left2_time_daily_index = findIndexWithKey('time_daily', left2[0])
+
+            if left1_time_daily_index is not None and left2_time_daily_index is not None:
+                if left1[0][left1_time_daily_index] == left2[0][left2_time_daily_index]:
+                    support = 0.0
+                    continue
+            new_pattern = left1 + left2
+        else:
+            if left1[-(pattern_len - 1):] == left2[:pattern_len - 1]:
+                new_pattern = left1 + left2[-1:]
+            else:
+                support = 0.0
+                continue
+
+        # Calculate upper bound
+        upper_bound = None
+        upper_time = None
+        if pattern_len > 1 and not is_right:
+            upper_start_ts = time.time()
+            upper_bound, upper_bound_info = getUpperBoundSupport(left1, left2, not is_right)
+            upper_end_ts = time.time()
+            upper_time = upper_end_ts - upper_start_ts
+            print "-----------------"
+            print left1
+            print left2
+            print upper_bound
+            print upper_bound_info
+
+        tttt2 = time.time()
 
 def getClassFromFile(filename):
     f = open(filename)
@@ -886,9 +935,12 @@ for user_idx, file_info in enumerate(file_info_list):
                             prev_rules = list(next_rules)
                             next_rules = list()
                             valid_rules = list()
-                                
+    
                             prev_pattern_to_support = dict(next_pattern_to_support)
                             next_pattern_to_support = dict()
+
+                            # TODO: Update upper bound support until upper bound is not changed.
+                            calculateUpperBoundSupport(k, sorted_left1, left1, itemTimestampIndexDict, min_sup, min_conf, granularityTimestampList, next_rules, valid_rules, daily_time_idx_dict, max_partial_len=max_partial_len)
 
                             ttt1 = time.time()
                             for i, left1 in enumerate(sorted_left1):
