@@ -597,16 +597,28 @@ def calculateUpperBoundSupport(left_candidates, left1, is_right = False):
         upper_time = None
         if pattern_len > 1 and not is_right:
             upper_start_ts = time.time()
-            upper_bound, upper_bound_info = getUpperBoundSupport(left1, left2, not is_right)
+            upper_bound_support, upper_bound_info = getUpperBoundSupport(left1, left2, not is_right)
             upper_end_ts = time.time()
             upper_time = upper_end_ts - upper_start_ts
+            if new_pattern not in prev_pattern_to_support or prev_pattern_to_support[new_pattern] != upper_bound_support:
+                    '''
+                    print "-----------------------"
+                    print new_pattern
+                    print upper_bound_info
+                    print upper_bound_support
+                    if new_pattern in prev_pattern_to_support:
+                        print "Old", prev_pattern_to_support[new_pattern]
+                    print "-----------------------"
+                    '''
+                    next_pattern_to_support[new_pattern] = upper_bound_support
+            '''
             print "-----------------"
             print left1
             print left2
-            print min(upper_bound_info[2], upper_bound_info[3]), upper_bound
+            print min(upper_bound_info[2], upper_bound_info[3]), upper_bound_support
             print upper_bound_info
             print "-----------------"
-
+            '''
         tttt2 = time.time()
 
 def getClassFromFile(filename):
@@ -943,8 +955,21 @@ for user_idx, file_info in enumerate(file_info_list):
                             next_pattern_to_support = dict()
 
                             # TODO: Update upper bound support until upper bound is not changed.
-                            for i, left1 in enumerate(sorted_left1):
-                                calculateUpperBoundSupport(sorted_left1, left1)
+                            endUpdate = True
+                            updateCnt = 0
+                            while endUpdate:
+                                print "# Update: %d" % (updateCnt)
+                                updateCnt += 1
+                                for i, left1 in enumerate(sorted_left1):
+                                    calculateUpperBoundSupport(sorted_left1, left1)
+                                # Update upper bound support for each pattern
+                                print "Upper bound update information", len(next_pattern_to_support.keys())
+                                for new_pattern in next_pattern_to_support:
+                                    prev_pattern_to_support[new_pattern] = next_pattern_to_support[new_pattern]
+                                if len(next_pattern_to_support.keys()) == 0:
+                                    endUpdate = False
+                                next_pattern_to_support = dict()
+
 
                             ttt1 = time.time()
                             for i, left1 in enumerate(sorted_left1):
