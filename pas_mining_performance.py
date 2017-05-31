@@ -329,7 +329,7 @@ def isValidateCombanation(min_sup, left1, left2, pruned_candidate, able_candidat
 
 
 
-def getIsSupersetPatternWithAddedPattern(subset_pattern, superset_pattern):
+def getIsSupersetPatternWithAddedPattern(subset_pattern, superset_pattern, subset_gap_list, superset_gap_list):
     # subset_pattern: {A,B}{C,D}, superset_pattern: {A,B,E}{C,D,F}
     # subset_pattern: {A,B}{C,D}, superset_pattern: {A,B}{C,D}{E,F}
     # subset_pattern: {A,B}{C,D}, superset_pattern: {A,B}{E,F}{C,D}
@@ -339,14 +339,22 @@ def getIsSupersetPatternWithAddedPattern(subset_pattern, superset_pattern):
     # print superset_pattern
     subset_pattern_idx = 0
     unsame_superset_pattern_idx_list = list()
+    superset_pattern_gap = 0
     for superset_pattern_idx in range(len(superset_pattern)):
         if subset_pattern_idx < len(subset_pattern):
             subset_item = set(subset_pattern[subset_pattern_idx])
             superset_item = set(superset_pattern[superset_pattern_idx])
-            if subset_item != superset_item:
+            if (superset_pattern_idx - 1 >= 0):
+                superset_pattern_gap = superset_pattern_gap + superset_gap_list[superset_pattern_idx - 1]
+            subset_pattern_gap = 0
+            if (subset_pattern_idx - 1 >= 0):
+                subset_pattern_gap = subset_gap_list[subset_pattern_idx - 1]
+
+            if subset_item != superset_item or superset_pattern_gap != subset_pattern_gap:
                 unsame_superset_pattern_idx_list.append(superset_pattern_idx)
-            if subset_item == superset_item or subset_item.issubset(superset_item): # Check subset
-                subset_pattern_idx += 1                    
+            if (subset_item == superset_item or subset_item.issubset(superset_item)) and superset_pattern_gap == subset_pattern_gap: # Check subset
+                subset_pattern_idx += 1       
+                superset_pattern_gap = 0             
         else:
             unsame_superset_pattern_idx_list.append(superset_pattern_idx)
 
@@ -362,15 +370,15 @@ def getIsSupersetPatternWithAddedPattern(subset_pattern, superset_pattern):
 
     return is_superset, tuple(added_pattern)
 
-def getSupportFromPrevRules(pattern):
+def getSupportFromPrevRules(pattern, left_pattern = None):
     for prev_rule in prev_rules:
         if pattern == prev_rule[0]:
             return prev_rule[7]
-        elif pattern == prev_rule[1]:
-            # TODO Need to check gap
+        elif left_pattern is not None and left_pattern == prev_rule[0] and pattern == prev_rule[1]:
             return prev_rule[8]
 
-def getUpperBoundSupport(pattern1, pattern2, is_antecedent):
+def getUpperBoundSupport(pattern1, pattern2, is_antecedent, left_pattern1 = None, left_pattern2 = None):
+    # If pattern1 and pattern2 are consequent patterns, ancedent pattern (left_pattern1, left_pattern2) are needed.
     # Rule Info: (new_left, new_right, left_tids, new_both_tids, support, confidence, right_tids, left_support, right_support)  # , new_left_symbol, new_right_symbol)
     if is_antecedent:
         pattern_type = 0
@@ -382,8 +390,8 @@ def getUpperBoundSupport(pattern1, pattern2, is_antecedent):
     # print "pattern 1: " + str(pattern1)
     # print "pattern 2: " + str(pattern2)
 
-    pattern1_supp = getSupportFromPrevRules(pattern1)
-    pattern2_supp = getSupportFromPrevRules(pattern2)
+    pattern1_supp = getSupportFromPrevRules(pattern1, left_pattern1)
+    pattern2_supp = getSupportFromPrevRules(pattern2, left_pattern2)
     upper_bound = min(pattern1_supp, pattern2_supp)
 
     # print pattern1_supp
@@ -399,19 +407,29 @@ def getUpperBoundSupport(pattern1, pattern2, is_antecedent):
 
     # print common_pattern
 
+    # Get Gap List of Pattern1, Pattern2
+    if is_antecedent:
+        pattern1_gap_list = getGapListInPattern(pattern1)
+        pattern2_gap_list = getGapListInPattern(pattern2)
+    else:
+        pattern1_gap_list = getGapListInPattern(left_pattern1)
+        pattern2_gap_list = getGapListInPattern(left_pattern2)
+
     # Find supp(A,C) and supp(C,B) where C is `added_pattern`.
     superset_common_pattern_to_superset_pair_support = dict()
-    for prev_pattern in prev_pattern_to_support:
-        candidate_pattern = prev_pattern # It can be supp(A,C) or supp(C,B).
+    for prev_pattern_info in prev_pattern_to_support:
+        candidate_pattern = prev_pattern_info[0] # It can be supp(A,C) or supp(C,B).
+        candidate_pattern_gap_list = prev_pattern_info[1]
+        
         candidate_pattern_supp = prev_pattern_to_support[candidate_pattern]
-        is_superset_of_pattern1, added_pattern_of_pattern1 = getIsSupersetPatternWithAddedPattern(pattern1, candidate_pattern)
+        is_superset_of_pattern1, added_pattern_of_pattern1 = getIsSupersetPatternWithAddedPattern(pattern1, candidate_pattern, pattern1_gap_list, candidate_pattern_gap_list)
         if is_superset_of_pattern1:
             # supp(A,C)
             if not added_pattern_of_pattern1 in superset_common_pattern_to_superset_pair_support:
                 superset_common_pattern_to_superset_pair_support[added_pattern_of_pattern1] = dict()
             superset_common_pattern_to_superset_pair_support[added_pattern_of_pattern1][0] = (candidate_pattern, candidate_pattern_supp)
 
-        is_superset_of_pattern2, added_pattern_of_pattern2 = getIsSupersetPatternWithAddedPattern(pattern2, candidate_pattern)
+        is_superset_of_pattern2, added_pattern_of_pattern2 = getIsSupersetPatternWithAddedPattern(pattern2, candidate_pattern, pattern2_gap_list, candidate_pattern_gap_list)
         if is_superset_of_pattern2:
             # supp(C,B)
             if not added_pattern_of_pattern2 in superset_common_pattern_to_superset_pair_support:
@@ -565,63 +583,76 @@ def concatLeftCandidate(k, left_candidates, left1, itemTimestampIndexDict, min_s
         tt2 = time.time()
 
 
-def calculateUpperBoundSupport(left_candidates, left1, is_right = False):
-    for left2_index in range(len(left_candidates)):
-        debug_print("--------------------------------")
-        debug_print("Given Left1: " + str(left1))
+def getGapListInPattern(pattern):
+    # This method works only on ancedent pattern (In other words, for patterns containing 'time_daily')
+    # Calculate Gap
+    idx_delta_list = []
+    prev_idx = None
+    pattern_idx_dict = dict()
+    for i, item in enumerate(pattern):
+        if prev_idx is not None:
+            current_pattern_time = pattern[i][findIndexWithKey('time_daily', pattern[i])].split('time_daily:')[1]
+            prev_pattern_time = pattern[prev_idx][findIndexWithKey('time_daily', pattern[prev_idx])].split('time_daily:')[1]
 
-        left2 = left_candidates[left2_index]
+            current_pattern_time_idx = daily_time_idx_dict[current_pattern_time]
+            prev_pattern_time_idx = daily_time_idx_dict[prev_pattern_time]
 
-        tttt1 = time.time()
+            delta = current_pattern_time_idx - prev_pattern_time_idx
+            if delta < 0:
+                delta = len(daily_time_idx_dict) + delta
+            idx_delta_list.append(delta)
+        prev_idx = i
+    return idx_delta_list
 
-        debug_print("LEFT1: " + str(left1))
-        debug_print("LEFT2: " + str(left2))
 
-        pattern_len = len(left1)
-        if pattern_len == 1:
-            left1_time_daily_index = findIndexWithKey('time_daily', left1[0])
-            left2_time_daily_index = findIndexWithKey('time_daily', left2[0])
+def calculateUpperBoundSupport(pattern1, pattern2, is_right = False, left1 = None, left2 = None):
+    
+    tttt1 = time.time()
 
-            if left1_time_daily_index is not None and left2_time_daily_index is not None:
-                if left1[0][left1_time_daily_index] == left2[0][left2_time_daily_index]:
-                    support = 0.0
-                    continue
-            new_pattern = left1 + left2
-        else:
-            if left1[-(pattern_len - 1):] == left2[:pattern_len - 1]:
-                new_pattern = left1 + left2[-1:]
-            else:
+    debug_print("Pattern1: " + str(pattern1))
+    debug_print("Pattern2: " + str(pattern2))
+
+    pattern_len = len(pattern1)
+    if pattern_len == 1:
+        pattern1_time_daily_index = findIndexWithKey('time_daily', pattern1[0])
+        pattern2_time_daily_index = findIndexWithKey('time_daily', pattern2[0])
+
+        if pattern1_time_daily_index is not None and pattern2_time_daily_index is not None:
+            if pattern1[0][pattern1_time_daily_index] == pattern2[0][pattern2_time_daily_index]:
                 support = 0.0
-                continue
+                return
+        new_pattern = pattern1 + pattern2
+    else:
+        if pattern1[-(pattern_len - 1):] == pattern2[:pattern_len - 1]:
+            new_pattern = pattern1 + pattern2[-1:]
+        else:
+            support = 0.0
+            return
 
-        # Calculate upper bound
-        upper_bound = None
-        upper_time = None
-        if pattern_len > 1 and not is_right:
-            upper_start_ts = time.time()
-            upper_bound_support, upper_bound_info = getUpperBoundSupport(left1, left2, not is_right)
-            upper_end_ts = time.time()
-            upper_time = upper_end_ts - upper_start_ts
-            if new_pattern not in prev_pattern_to_support or prev_pattern_to_support[new_pattern] != upper_bound_support:
-                    print "-----------------------"
-                    print left1
-                    print left2
-                    print new_pattern
-                    print upper_bound_info
-                    print upper_bound_support
-                    if new_pattern in prev_pattern_to_support:
-                        print "Old", prev_pattern_to_support[new_pattern]
-                    print "-----------------------"
-                    next_pattern_to_support[new_pattern] = upper_bound_support
-            '''
-            print "-----------------"
-            print left1
-            print left2
-            print min(upper_bound_info[2], upper_bound_info[3]), upper_bound_support
-            print upper_bound_info
-            print "-----------------"
-            '''
-        tttt2 = time.time()
+    # TODO: Check if patterns are connected
+    # TODO: Check if gaps are connected
+    # TODO: Gap for new pattern
+
+    # Calculate upper bound
+    upper_bound = None
+    upper_time = None
+    if pattern_len > 1 and not is_right:
+        upper_start_ts = time.time()
+        upper_bound_support, upper_bound_info = getUpperBoundSupport(pattern1, pattern2, not is_right, left1, left2)
+        upper_end_ts = time.time()
+        upper_time = upper_end_ts - upper_start_ts
+        if new_pattern not in prev_pattern_to_support or prev_pattern_to_support[new_pattern] != upper_bound_support:
+                print "-----------------------"
+                print pattern1
+                print pattern2
+                print new_pattern
+                print upper_bound_info
+                print upper_bound_support
+                if new_pattern in prev_pattern_to_support:
+                    print "Old", prev_pattern_to_support[new_pattern]
+                print "-----------------------"
+                next_pattern_to_support[new_pattern] = upper_bound_support #TODO: Key contain gap list (new_pattern, gap_list)
+    tttt2 = time.time()
 
 def getClassFromFile(filename):
     f = open(filename)
