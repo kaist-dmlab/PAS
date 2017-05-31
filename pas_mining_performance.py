@@ -421,6 +421,7 @@ def getUpperBoundSupport(pattern1, pattern2, is_antecedent):
     # Find C maximizing |supp(A,C) - supp(C,B)| 
     max_diff_pair = 0
     max_superset_pair_support = None
+    max_superset_common_pattern = None
     for superset_common_pattern in superset_common_pattern_to_superset_pair_support:
         superset_pair_support = superset_common_pattern_to_superset_pair_support[superset_common_pattern]
         if len(superset_pair_support.keys()) == 2:
@@ -434,6 +435,7 @@ def getUpperBoundSupport(pattern1, pattern2, is_antecedent):
             if max_diff_pair < diff_pair:
                 max_diff_pair = diff_pair
                 max_superset_pair_support = superset_pair_support
+                max_superset_common_pattern = superset_common_pattern
 
     # print "Max superset pair support"
     # print max_superset_pair_support
@@ -459,7 +461,7 @@ def getUpperBoundSupport(pattern1, pattern2, is_antecedent):
         print max_superset_pair_support
         print "Upper Bound: " + str(upper_bound)
     '''
-    return upper_bound, (pattern1, pattern2, pattern1_supp, pattern2_supp, upper_bound, max_superset_pair_support)
+    return upper_bound, (pattern1, pattern2, pattern1_supp, pattern2_supp, upper_bound, max_superset_pair_support, max_superset_common_pattern)
 
 def concatLeftCandidate(k, left_candidates, left1, itemTimestampIndexDict, min_sup, min_conf, timestampList, nextRules, validRules, daily_time_idx_dict, max_partial_len):
     for left2_index in range(len(left_candidates)):
@@ -601,15 +603,15 @@ def calculateUpperBoundSupport(left_candidates, left1, is_right = False):
             upper_end_ts = time.time()
             upper_time = upper_end_ts - upper_start_ts
             if new_pattern not in prev_pattern_to_support or prev_pattern_to_support[new_pattern] != upper_bound_support:
-                    '''
                     print "-----------------------"
+                    print left1
+                    print left2
                     print new_pattern
                     print upper_bound_info
                     print upper_bound_support
                     if new_pattern in prev_pattern_to_support:
                         print "Old", prev_pattern_to_support[new_pattern]
                     print "-----------------------"
-                    '''
                     next_pattern_to_support[new_pattern] = upper_bound_support
             '''
             print "-----------------"
