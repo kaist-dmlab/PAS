@@ -232,7 +232,7 @@ def isValidateCombanation(min_sup, left1, left2, pruned_candidate, able_candidat
         debug_print("OUTPUT TIDS:" + str(output_tids))
 
         next_pattern_support = getSupportFromTids(output_tids, timestampList)
-        next_pattern_to_support[new_pattern] = next_pattern_support #TODO: Gap
+        next_pattern_to_support[(new_pattern, tuple(idx_delta_list))] = next_pattern_support
 
         if next_pattern_support >= min_sup:
             is_sequence = True
@@ -306,7 +306,7 @@ def isValidateCombanation(min_sup, left1, left2, pruned_candidate, able_candidat
                         break
 
         next_pattern_support = getSupportFromTids(output_tids, timestampList)
-        next_pattern_to_support[new_pattern] = next_pattern_support #TODO: Gap
+        next_pattern_to_support[(new_pattern, tuple(idx_delta_list))] = next_pattern_support
         if next_pattern_support >= min_sup:
             is_sequence = True
 
@@ -420,8 +420,8 @@ def getUpperBoundSupport(pattern1, pattern2, is_antecedent, left_pattern1 = None
     for prev_pattern_info in prev_pattern_to_support:
         candidate_pattern = prev_pattern_info[0] # It can be supp(A,C) or supp(C,B).
         candidate_pattern_gap_list = prev_pattern_info[1]
+        candidate_pattern_supp = prev_pattern_to_support[prev_pattern_info]
         
-        candidate_pattern_supp = prev_pattern_to_support[candidate_pattern]
         is_superset_of_pattern1, added_pattern_of_pattern1 = getIsSupersetPatternWithAddedPattern(pattern1, candidate_pattern, pattern1_gap_list, candidate_pattern_gap_list)
         if is_superset_of_pattern1:
             # supp(A,C)
@@ -605,13 +605,8 @@ def getGapListInPattern(pattern):
     return idx_delta_list
 
 
-def calculateUpperBoundSupport(pattern1, pattern2, is_right = False, left1 = None, left2 = None):
-    
-    tttt1 = time.time()
-
-    debug_print("Pattern1: " + str(pattern1))
-    debug_print("Pattern2: " + str(pattern2))
-
+def getJoinedPattern(pattern1, pattern2):
+    # Check if patterns are connected
     pattern_len = len(pattern1)
     if pattern_len == 1:
         pattern1_time_daily_index = findIndexWithKey('time_daily', pattern1[0])
@@ -619,19 +614,44 @@ def calculateUpperBoundSupport(pattern1, pattern2, is_right = False, left1 = Non
 
         if pattern1_time_daily_index is not None and pattern2_time_daily_index is not None:
             if pattern1[0][pattern1_time_daily_index] == pattern2[0][pattern2_time_daily_index]:
-                support = 0.0
-                return
+                return None
         new_pattern = pattern1 + pattern2
+        return new_pattern
     else:
         if pattern1[-(pattern_len - 1):] == pattern2[:pattern_len - 1]:
             new_pattern = pattern1 + pattern2[-1:]
+            return new_pattern
         else:
-            support = 0.0
-            return
+            return None
+ 
 
-    # TODO: Check if patterns are connected
-    # TODO: Check if gaps are connected
-    # TODO: Gap for new pattern
+
+def calculateUpperBoundSupport(pattern1, pattern2, is_right = False, left1 = None, left2 = None):
+    
+    tttt1 = time.time()
+
+    debug_print("Pattern1: " + str(pattern1))
+    debug_print("Pattern2: " + str(pattern2))
+ 
+    # Check if patterns are connected
+    pattern_len = len(pattern1)
+    if is_right:
+        left_new_pattern = getJoinedPattern(left1, left2)
+        new_pattern = getJoinedPattern(pattern1, pattern2)
+    else:
+        left_new_pattern = getJoinedPattern(pattern1, pattern2)
+        new_pattern = left_new_pattern
+    
+    if left_new_pattern is None or new_pattern is None: # Not joinable
+        return
+
+    # Gap for new pattern
+    if not is_right:
+        new_pattern_gap_list = getGapListInPattern(new_pattern)
+    else:
+        new_pattern_gap_list = getGapListInPattern(left_new_pattern)
+
+    new_pattern_info = (new_pattern, tuple(new_pattern_gap_list))
 
     # Calculate upper bound
     upper_bound = None
@@ -641,17 +661,17 @@ def calculateUpperBoundSupport(pattern1, pattern2, is_right = False, left1 = Non
         upper_bound_support, upper_bound_info = getUpperBoundSupport(pattern1, pattern2, not is_right, left1, left2)
         upper_end_ts = time.time()
         upper_time = upper_end_ts - upper_start_ts
-        if new_pattern not in prev_pattern_to_support or prev_pattern_to_support[new_pattern] != upper_bound_support:
+        if new_pattern_info not in prev_pattern_to_support or prev_pattern_to_support[new_pattern_info] != upper_bound_support:
                 print "-----------------------"
                 print pattern1
                 print pattern2
                 print new_pattern
                 print upper_bound_info
                 print upper_bound_support
-                if new_pattern in prev_pattern_to_support:
-                    print "Old", prev_pattern_to_support[new_pattern]
+                if new_pattern_info in prev_pattern_to_support:
+                    print "Old", prev_pattern_to_support[new_pattern_info]
                 print "-----------------------"
-                next_pattern_to_support[new_pattern] = upper_bound_support #TODO: Key contain gap list (new_pattern, gap_list)
+                next_pattern_to_support[new_pattern_info] = upper_bound_support #Key contain gap list (new_pattern, gap_list)
     tttt2 = time.time()
 
 def getClassFromFile(filename):
@@ -959,7 +979,7 @@ for user_idx, file_info in enumerate(file_info_list):
                         for item in items:
                             pattern = (item[0],)
                             support = item[1]
-                            next_pattern_to_support[pattern] = support
+                            next_pattern_to_support[(pattern, tuple(list()))] = support
                         
                         k = 1
                         while True:
@@ -987,7 +1007,7 @@ for user_idx, file_info in enumerate(file_info_list):
                             prev_pattern_to_support = dict(next_pattern_to_support)
                             next_pattern_to_support = dict()
 
-                            # TODO: Update upper bound support until upper bound is not changed.
+                            # Update upper bound support until upper bound is not changed.
                             endUpdate = True
                             updateCnt = 0
                             while endUpdate:
@@ -997,8 +1017,8 @@ for user_idx, file_info in enumerate(file_info_list):
                                     calculateUpperBoundSupport(sorted_left1, left1)
                                 # Update upper bound support for each pattern
                                 print "Upper bound update information", len(next_pattern_to_support.keys())
-                                for new_pattern in next_pattern_to_support:
-                                    prev_pattern_to_support[new_pattern] = next_pattern_to_support[new_pattern]
+                                for new_pattern_info in next_pattern_to_support:
+                                    prev_pattern_to_support[new_pattern_info] = next_pattern_to_support[new_pattern_info]
                                 if len(next_pattern_to_support.keys()) == 0:
                                     endUpdate = False
                                 next_pattern_to_support = dict()
