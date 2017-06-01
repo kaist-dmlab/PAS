@@ -1013,8 +1013,9 @@ for user_idx, file_info in enumerate(file_info_list):
                             while endUpdate:
                                 print "# Update: %d" % (updateCnt)
                                 updateCnt += 1
-                                for i, left1 in enumerate(sorted_left1):
-                                    calculateUpperBoundSupport(sorted_left1, left1)
+                                for left1 in sorted_left1:
+                                      for left2 in sorted_left1:
+                                            calculateUpperBoundSupport(left1, left2)
                                 # Update upper bound support for each pattern
                                 print "Upper bound update information", len(next_pattern_to_support.keys())
                                 for new_pattern_info in next_pattern_to_support:
