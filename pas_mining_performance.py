@@ -495,6 +495,26 @@ def concatLeftCandidate(k, left_candidates, left1, itemTimestampIndexDict, min_s
         # Pruning rule 1 (Remove right combination when left combination is invalid.)
         if left_is_sequence or not PRUNING_RULE1_ON:
             tt1 = time.time()
+
+            #TODO: Calculate upper bound support for right pairs
+            # Update upper bound support until upper bound is not changed.
+            endUpdate = True
+            updateCnt = 0
+            while endUpdate:
+                print "# Update: %d" % (updateCnt)
+                updateCnt += 1
+                for right1 in left_right_dict[left1]:
+                    for right2 in set(left_right_dict[left2]):
+                        calculateUpperBoundSupport(right1, right2, True, left1, left2)
+                # Update upper bound support for each pattern
+                print "Upper bound update information", len(next_pattern_to_support.keys())
+                for new_pattern_info in next_pattern_to_support:
+                    prev_pattern_to_support[new_pattern_info] = next_pattern_to_support[new_pattern_info]
+                if len(next_pattern_to_support.keys()) == 0:
+                    endUpdate = False
+                next_pattern_to_support = dict()
+            
+
             for right1 in left_right_dict[left1]:
                 right2_candidates = set(left_right_dict[left2])
 
