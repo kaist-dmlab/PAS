@@ -781,7 +781,7 @@ def UpdateUpperBoundSupportPairSets(pattern_list1, pattern_list2, pattern_to_upp
     updateCnt = 0
     while endUpdate:
         # Update upper bound support until upper bound is not changed.
-        print "Upper Bound Update: %d" % updateCnt
+        # print "Upper Bound Update: %d" % updateCnt
         updateCnt += 1
         updated_upper_bound_support_cnt = 0
         for pattern1 in pattern_list1:
@@ -791,20 +791,21 @@ def UpdateUpperBoundSupportPairSets(pattern_list1, pattern_list2, pattern_to_upp
                     # pattern_to_upper_bound_support[new_pattern_info] = upper_bound_info
                     # next_pattern_to_support[new_pattern_info] = upper_bound_support #Key contain gap list (new_pattern, gap_list)
                     if new_pattern_info not in next_pattern_to_support or next_pattern_to_support[new_pattern_info] != upper_bound_support:
+                        '''
                         print "-----------------------"
                         print new_pattern_info
                         print upper_bound_info
                         print upper_bound_support
                         if new_pattern_info in next_pattern_to_support:
                             print "Before Update", next_pattern_to_support[new_pattern_info]
-
+                        '''
                         pattern_to_upper_bound_support[new_pattern_info] = upper_bound_info
                         next_pattern_to_support[new_pattern_info] = upper_bound_support
                         updated_upper_bound_support_cnt += 1
 
-                        print "-----------------------"
+                        # print "-----------------------"
         # Update upper bound support for each pattern
-        print "Upper bound update information", updated_upper_bound_support_cnt
+        # print "Upper bound update information", updated_upper_bound_support_cnt
 
         # Update prev_pattern_to_support based on next_pattern_to_upper_bound_support (upper bound pattern)
         # for new_pattern_info in next_pattern_to_upper_bound_support:
@@ -825,11 +826,13 @@ def UpdateUpperBoundSupportPairSets(pattern_list1, pattern_list2, pattern_to_upp
                     superset_pattern_support = next_pattern_to_support[superset_pattern_info]
                     is_superset_of_pattern1, added_pattern_of_pattern1, added_pattern_idx_in_subset_pattern_list, added_pattern_idx_in_superset_pattern_list = getIsSupersetPatternWithAddedPattern(subset_pattern, superset_pattern, subset_pattern_gap_list, superset_pattern_gap_list)
                     if is_superset_of_pattern1 and superset_pattern_support > subset_pattern_support:
+                        '''
                         print "------UPDATE_BASED_SUB_PATTERN-------"
                         print subset_pattern_info
                         print superset_pattern_info
                         print subset_pattern_support
                         print superset_pattern_support
+                        '''
                         next_pattern_to_support[superset_pattern_info] = subset_pattern_support
                         pattern_to_upper_bound_support[superset_pattern_info] = pattern_to_upper_bound_support[subset_pattern_info]
     
