@@ -776,7 +776,10 @@ def getClassFromFile(filename):
 def UpdateUpperBoundSupportPairSets(pattern_list1, pattern_list2, pattern_to_upper_bound_support, is_right = False, left1 = None, left2 = None):
     global prev_pattern_to_support
     global next_pattern_to_support
-    
+   
+    if not UPPER_BOUND_RULE_BASED_COMMON:
+        return dict() # Return empty
+ 
     endUpdate = True
     updateCnt = 0
     while endUpdate:
@@ -925,8 +928,8 @@ for user_idx, file_info in enumerate(file_info_list):
                 max_partial_len = 1
             is_stop = False
             while not is_stop:
-                UPPER_BOUND_RULE_BASED_COMMON = True
-                UPPER_BOUND_RULE_UPDATE_BASED_SUB_PATTERN = True
+                UPPER_BOUND_RULE_BASED_COMMON = False
+                UPPER_BOUND_RULE_UPDATE_BASED_SUB_PATTERN = False
                 UPPER_BOUND_RULE_UPDATED_BASED_ESTIMATED_PATTERN = False # This does not work. Common pattern have to be in overlaped range
                 for PRUNING_RULE1_ON, PRUNING_RULE2_ON, PRUNING_RULE3_ON in [(True, True, False)]: #, (False, True, False), (True, False, False), (False, False, False)]: Only once
                     print ">>>>>> min_sup: %f, min_conf: %f, max_partial_len: %d <<<<<<" % (min_sup, min_conf, max_partial_len)
