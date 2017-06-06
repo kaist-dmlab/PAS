@@ -195,6 +195,9 @@ def isValidateCombanation(min_sup, left1, left2, pruned_candidate, able_candidat
         candidate_tids = tuple()
         output_tids = list()
         for start in range(len(all_tids)):
+            check_pattern_idx = 0
+            prev_tid_pattern_idx = None
+            candidate_tids = tuple()
             for i, tid_with_pattern_idx in enumerate(all_tids[start:]):
                 tid = tid_with_pattern_idx[0]
                 pattern_idx = tid_with_pattern_idx[1]
@@ -336,6 +339,7 @@ def getIsSupersetPatternWithAddedPattern(subset_pattern, superset_pattern, subse
     subset_pattern_idx = 0
     unsame_superset_pattern_idx_list = list()
     superset_pattern_gap = 0
+    added_pattern_idx_in_subset_pattern_list = list()
     for superset_pattern_idx in range(len(superset_pattern)):
         if subset_pattern_idx < len(subset_pattern):
             subset_item = set(subset_pattern[subset_pattern_idx])
@@ -348,11 +352,13 @@ def getIsSupersetPatternWithAddedPattern(subset_pattern, superset_pattern, subse
 
             if subset_item != superset_item or superset_pattern_gap != subset_pattern_gap:
                 unsame_superset_pattern_idx_list.append(superset_pattern_idx)
+                added_pattern_idx_in_subset_pattern_list.append(subset_pattern_idx)
             if (subset_item == superset_item or subset_item.issubset(superset_item)) and superset_pattern_gap == subset_pattern_gap: # Check subset
                 subset_pattern_idx += 1       
                 superset_pattern_gap = 0             
         else:
             unsame_superset_pattern_idx_list.append(superset_pattern_idx)
+            added_pattern_idx_in_subset_pattern_list.append(subset_pattern_idx)
 
     added_pattern = list() # Pattern C in P(A,C)
     for unsame_superset_pattern_idx in unsame_superset_pattern_idx_list:
@@ -364,7 +370,7 @@ def getIsSupersetPatternWithAddedPattern(subset_pattern, superset_pattern, subse
         is_superset = False
     # print is_superset
 
-    return is_superset, tuple(added_pattern)
+    return is_superset, tuple(added_pattern), added_pattern_idx_in_subset_pattern_list, unsame_superset_pattern_idx_list
 
 def getSupportFromPrevRules(pattern, left_pattern = None):
     for prev_rule in prev_rules:
@@ -426,25 +432,41 @@ def getUpperBoundSupport(new_pattern_info, pattern1, pattern2, is_antecedent, le
             candidate_pattern_gap_list = pattern_info[1]
             candidate_pattern_supp = pattern_to_support[pattern_info]
         
-            is_superset_of_pattern1, added_pattern_of_pattern1 = getIsSupersetPatternWithAddedPattern(pattern1, candidate_pattern, pattern1_gap_list, candidate_pattern_gap_list)
+            is_superset_of_pattern1, added_pattern_of_pattern1, added_pattern_idx_in_subset_pattern_list, added_pattern_idx_in_superset_pattern_list = getIsSupersetPatternWithAddedPattern(pattern1, candidate_pattern, pattern1_gap_list, candidate_pattern_gap_list)
+            
+            added_pattern_idx_validation = False # added pattern(C) have to be added in overlaping range
             if is_superset_of_pattern1:
+                for overlap_idx in range(len(pattern1))[-(len(pattern1)-1):]:
+                    if overlap_idx in added_pattern_idx_in_subset_pattern_list:
+                        added_pattern_idx_validation = True
+                        break
+            
+            if is_superset_of_pattern1 and added_pattern_idx_validation:
                 # supp(A,C)
                 if not added_pattern_of_pattern1 in superset_common_pattern_to_superset_pair_support:
                     superset_common_pattern_to_superset_pair_support[added_pattern_of_pattern1] = dict()
                     superset_common_pattern_to_superset_pair_support[added_pattern_of_pattern1][0] = list()
                     superset_common_pattern_to_superset_pair_support[added_pattern_of_pattern1][1] = list()
 
-                superset_common_pattern_to_superset_pair_support[added_pattern_of_pattern1][0].append((candidate_pattern, candidate_pattern_supp))
+                superset_common_pattern_to_superset_pair_support[added_pattern_of_pattern1][0].append((candidate_pattern, candidate_pattern_supp, added_pattern_idx_in_subset_pattern_list))
 
-            is_superset_of_pattern2, added_pattern_of_pattern2 = getIsSupersetPatternWithAddedPattern(pattern2, candidate_pattern, pattern2_gap_list, candidate_pattern_gap_list)
+            is_superset_of_pattern2, added_pattern_of_pattern2, added_pattern_idx_in_subset_pattern_list, added_pattern_idx_in_superset_pattern_list = getIsSupersetPatternWithAddedPattern(pattern2, candidate_pattern, pattern2_gap_list, candidate_pattern_gap_list)
+            
+            added_pattern_idx_validation = False
             if is_superset_of_pattern2:
+                for overlap_idx in range(len(pattern2))[:len(pattern2)-1]:
+                    if overlap_idx in added_pattern_idx_in_subset_pattern_list:
+                        added_pattern_idx_validation = True
+                        break
+
+            if is_superset_of_pattern2 and added_pattern_idx_validation:
                 # supp(C,B)
                 if not added_pattern_of_pattern2 in superset_common_pattern_to_superset_pair_support:
                     superset_common_pattern_to_superset_pair_support[added_pattern_of_pattern2] = dict()
                     superset_common_pattern_to_superset_pair_support[added_pattern_of_pattern2][0] = list()
                     superset_common_pattern_to_superset_pair_support[added_pattern_of_pattern2][1] = list()
 
-                superset_common_pattern_to_superset_pair_support[added_pattern_of_pattern2][1].append((candidate_pattern, candidate_pattern_supp))
+                superset_common_pattern_to_superset_pair_support[added_pattern_of_pattern2][1].append((candidate_pattern, candidate_pattern_supp, added_pattern_idx_in_superset_pattern_list))
     
     # Find C maximizing |supp(A,C) - supp(C,B)| 
     max_superset_pair_support = None
@@ -477,6 +499,9 @@ def getUpperBoundSupport(new_pattern_info, pattern1, pattern2, is_antecedent, le
                     pattern1_common_pattern_supp = superset_pair_support_pattern1[1]
                     pattern2_common_pattern_supp = superset_pair_support_pattern2[1]
  
+                    added_pattern_idx_in_common_pattern1_list = superset_pair_support_pattern1[2]
+                    added_pattern_idx_in_common_pattern2_list = superset_pair_support_pattern2[2]
+
                     # print "---------------TEST--------------"
                     # print common_pattern1
                     # print common_pattern2
@@ -490,6 +515,25 @@ def getUpperBoundSupport(new_pattern_info, pattern1, pattern2, is_antecedent, le
                         continue
                     if len(common_pattern2) > len(common_pattern1) and pattern2_common_pattern_supp > pattern1_common_pattern_supp: # common_pattern2 is estimated support
                         continue
+
+                    is_changed_overlap = False
+                    if len(common_pattern1) > len(pattern1):
+                        for added_pattern_idx in added_pattern_idx_in_common_pattern1_list:
+                            if added_pattern_idx >= len(pattern1):
+                                is_changed_overlap = True
+                    if len(common_pattern2) > len(pattern2):
+                        for added_pattern_idx in added_pattern_idx_in_common_pattern2_list:
+                            if added_pattern_idx < (len(common_pattern2) - len(pattern2)):
+                                is_changed_overlap = True
+
+                    if is_changed_overlap:
+                        max_common_pattern_len = max(len(common_pattern1), len(common_pattern2))
+                        if common_pattern1[-(max_common_pattern_len-1):] != common_pattern2[:max_common_pattern_len-1]: # common pattern is checked in overlaped range
+                            continue
+                    else:
+                        if common_pattern1[-(len(pattern1)-1):] != common_pattern2[:len(pattern2)-1]: # common pattern is checked in overlaped range
+                            continue
+ 
 
                     # print "--------------------------------"
 
@@ -779,7 +823,7 @@ def UpdateUpperBoundSupportPairSets(pattern_list1, pattern_list2, pattern_to_upp
                     superset_pattern = superset_pattern_info[0]
                     superset_pattern_gap_list = superset_pattern_info[1]
                     superset_pattern_support = next_pattern_to_support[superset_pattern_info]
-                    is_superset_of_pattern1, added_pattern_of_pattern1 = getIsSupersetPatternWithAddedPattern(subset_pattern, superset_pattern, subset_pattern_gap_list, superset_pattern_gap_list)
+                    is_superset_of_pattern1, added_pattern_of_pattern1, added_pattern_idx_in_subset_pattern_list, added_pattern_idx_in_superset_pattern_list = getIsSupersetPatternWithAddedPattern(subset_pattern, superset_pattern, subset_pattern_gap_list, superset_pattern_gap_list)
                     if is_superset_of_pattern1 and superset_pattern_support > subset_pattern_support:
                         print "------UPDATE_BASED_SUB_PATTERN-------"
                         print subset_pattern_info
@@ -879,8 +923,8 @@ for user_idx, file_info in enumerate(file_info_list):
             is_stop = False
             while not is_stop:
                 UPPER_BOUND_RULE_BASED_COMMON = True
-                UPPER_BOUND_RULE_UPDATE_BASED_SUB_PATTERN = False
-                UPPER_BOUND_RULE_UPDATED_BASED_ESTIMATED_PATTERN = False
+                UPPER_BOUND_RULE_UPDATE_BASED_SUB_PATTERN = True
+                UPPER_BOUND_RULE_UPDATED_BASED_ESTIMATED_PATTERN = False # This does not work. Common pattern have to be in overlaped range
                 for PRUNING_RULE1_ON, PRUNING_RULE2_ON, PRUNING_RULE3_ON in [(True, True, False)]: #, (False, True, False), (True, False, False), (False, False, False)]: Only once
                     print ">>>>>> min_sup: %f, min_conf: %f, max_partial_len: %d <<<<<<" % (min_sup, min_conf, max_partial_len)
                     print "Pruning Rule (Foward Stop + Prune, Backward Prune): %s, %s" % (PRUNING_RULE1_ON, PRUNING_RULE2_ON)
