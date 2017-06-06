@@ -14,6 +14,7 @@ import sys
 
 
 IS_DEBUG = False
+UPPER_BOUND_PRUNED_CNT = 0
 
 def debug_print(str):
     if IS_DEBUG:
@@ -56,7 +57,8 @@ def findIndexWithKey(key, row):
 def isValidateCombanation(min_sup, left1, left2, pruned_candidate, able_candidate, timestampList, itemTimestampIndexDict, daily_time_idx_dict, max_partial_len=1, left1_for_right1=None, left2_for_right2=None, left_tids_for_right=None, is_right=False, pattern_to_upper_bound_support=None):
     global test_combination_cnt
     global pattern_all_tids
-    global pattern_to_calculated_support # TODO
+    global pattern_to_calculated_support
+    global UPPER_BOUND_PRUNED_CNT
 
     start_method_time = time.time()
 
@@ -190,6 +192,13 @@ def isValidateCombanation(min_sup, left1, left2, pruned_candidate, able_candidat
 
     partial_test = False
     if not is_right:
+        new_pattern_key = (new_pattern, tuple(idx_delta_list))
+        if new_pattern_key in next_pattern_to_support and UPPER_BOUND_RULE_BASED_COMMON:
+            upper_bound_support = next_pattern_to_support[new_pattern_key]
+            if upper_bound_support < min_sup:
+                UPPER_BOUND_PRUNED_CNT += 1
+                return is_sequence, new_pattern, None, idx_delta_list
+
         check_pattern_idx = 0
         prev_tid_pattern_idx = None
         candidate_tids = tuple()
@@ -227,8 +236,8 @@ def isValidateCombanation(min_sup, left1, left2, pruned_candidate, able_candidat
         debug_print("OUTPUT TIDS:" + str(output_tids))
 
         next_pattern_support = getSupportFromTids(output_tids, timestampList)
-        next_pattern_to_support[(new_pattern, tuple(idx_delta_list))] = next_pattern_support
-        pattern_to_calculated_support[(new_pattern, tuple(idx_delta_list))] = next_pattern_support
+        next_pattern_to_support[new_pattern_key] = next_pattern_support
+        pattern_to_calculated_support[new_pattern_key] = next_pattern_support
 
         if next_pattern_support >= min_sup:
             is_sequence = True
@@ -269,6 +278,14 @@ def isValidateCombanation(min_sup, left1, left2, pruned_candidate, able_candidat
         # print idx_delta_list
         # print left_tids
 
+        new_pattern_key = (new_pattern, tuple(idx_delta_list))
+        if new_pattern_key in next_pattern_to_support and UPPER_BOUND_RULE_BASED_COMMON:
+            upper_bound_support = next_pattern_to_support[new_pattern_key]
+            if upper_bound_support < min_sup:
+                UPPER_BOUND_PRUNED_CNT += 1
+                return is_sequence, new_pattern, None, idx_delta_list
+
+
         check_pattern_idx = 0
         prev_tid_pattern_idx = None
         candidate_tids = tuple()
@@ -302,8 +319,8 @@ def isValidateCombanation(min_sup, left1, left2, pruned_candidate, able_candidat
                         break
 
         next_pattern_support = getSupportFromTids(output_tids, timestampList)
-        next_pattern_to_support[(new_pattern, tuple(idx_delta_list))] = next_pattern_support
-        pattern_to_calculated_support[(new_pattern, tuple(idx_delta_list))] = next_pattern_support
+        next_pattern_to_support[new_pattern_key] = next_pattern_support
+        pattern_to_calculated_support[new_pattern_key] = next_pattern_support
 
         if next_pattern_support >= min_sup:
             is_sequence = True
@@ -915,7 +932,7 @@ for user_idx, file_info in enumerate(file_info_list):
     for try_idx in range(1):
         for performance_type in ['conf']: # , 'sup', 'partial']: Only once
             if performance_type == 'conf':
-                min_sup = 10 / 100.0
+                min_sup = 20 / 100.0
                 min_conf = 10 / 100.0
                 max_partial_len = 1
             elif performance_type == 'sup':
@@ -1246,7 +1263,9 @@ for user_idx, file_info in enumerate(file_info_list):
 
                             for new_pattern_key in right_pattern_to_upper_bound_support:
                                 upper_bound_info = right_pattern_to_upper_bound_support[new_pattern_key]
-                                calculated_support = pattern_to_calculated_support[new_pattern_key]
+                                calculated_support = -1
+                                if new_pattern_key in pattern_to_calculated_support:
+                                    calculated_support = pattern_to_calculated_support[new_pattern_key]
                                 F_UPPER.write(str(new_pattern_key) + "\t" + str(calculated_support) + "\t" + "\t".join(str(i) for i in list(upper_bound_info)) + "\n") # + str(upper_time) + "\t" + str(end_method_time - start_method_time) + "\n")
 
 
@@ -1257,6 +1276,7 @@ for user_idx, file_info in enumerate(file_info_list):
 
                             if k == 24 or len(next_rules) == 0:  # len(timestampList):
                                 print "Complete"
+                                print "Upper bound pruned pair count: %d" % UPPER_BOUND_PRUNED_CNT
                                 break
 
                         '''
