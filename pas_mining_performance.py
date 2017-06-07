@@ -414,8 +414,6 @@ def getUpperBoundSupport(new_pattern_info, pattern1, pattern2, is_antecedent, le
     superset_common_pattern_to_superset_pair_support = dict()
 
     upper_bound_info_list = [prev_pattern_to_support]
-    if UPPER_BOUND_RULE_UPDATED_BASED_ESTIMATED_PATTERN:
-        upper_bound_info_list = [prev_pattern_to_support, next_pattern_to_support]
 
     for pattern_to_support in upper_bound_info_list: # Find common pattern from previous pattern information (calculated support) and next pattern information (esimated upper bound)
         for pattern_info in pattern_to_support:
@@ -425,7 +423,7 @@ def getUpperBoundSupport(new_pattern_info, pattern1, pattern2, is_antecedent, le
        
             # Check candidate pattern is (A,C) or (C,B) 
             is_superset_of_pattern1, added_pattern_of_pattern1, added_pattern_idx_in_subset_pattern_list, added_pattern_idx_in_superset_pattern_list = getIsSupersetPatternWithAddedPattern(pattern1, candidate_pattern, pattern1_gap_list, candidate_pattern_gap_list)
-            
+           
             added_pattern_idx_validation = False # added pattern(C) have to be added in overlaping range
             if is_superset_of_pattern1:
                 for overlap_idx in range(len(pattern1))[-(len(pattern1)-1):]:
@@ -449,6 +447,7 @@ def getUpperBoundSupport(new_pattern_info, pattern1, pattern2, is_antecedent, le
                     if overlap_idx in added_pattern_idx_in_subset_pattern_list:
                         added_pattern_idx_validation = True
                         break
+            
             # Case of this candidate pattern is (C,B)
             if is_superset_of_pattern2 and added_pattern_idx_validation:
                 if not added_pattern_of_pattern2 in superset_common_pattern_to_superset_pair_support:
@@ -474,41 +473,20 @@ def getUpperBoundSupport(new_pattern_info, pattern1, pattern2, is_antecedent, le
             upper_bound = min(pattern1_supp, pattern2_supp) # Naive
             for superset_pair_support_pattern1 in superset_pair_support[0]:
                 for superset_pair_support_pattern2 in superset_pair_support[1]:
-                    # TODO: To use estimated support, it have to be super-pattern of another pattern that is not estimated.
                     common_pattern1 = superset_pair_support_pattern1[0]
                     common_pattern2 = superset_pair_support_pattern2[0]
                   
                     pattern1_common_pattern_supp = superset_pair_support_pattern1[1]
                     pattern2_common_pattern_supp = superset_pair_support_pattern2[1]
  
-                    added_pattern_idx_in_common_pattern1_list = superset_pair_support_pattern1[2]
-                    added_pattern_idx_in_common_pattern2_list = superset_pair_support_pattern2[2]
+                    # added_pattern_idx_in_common_pattern1_list = superset_pair_support_pattern1[2]
+                    # added_pattern_idx_in_common_pattern2_list = superset_pair_support_pattern2[2]
 
-                    if len(common_pattern1) > len(pattern1) and len(common_pattern2) > len(pattern2): # Both pattern (AxC, CxB) are estimated'
-                        continue
-                    # The estimated support of pattern have to be smaller than calculated support of pattern
-                    if len(common_pattern1) > len(common_pattern2) and pattern1_common_pattern_supp > pattern2_common_pattern_supp: # common_pattern1 is estimated support
-                        continue
-                    if len(common_pattern2) > len(common_pattern1) and pattern2_common_pattern_supp > pattern1_common_pattern_supp: # common_pattern2 is estimated support
+                    if len(common_pattern1) > len(pattern1) or len(common_pattern2) > len(pattern2): # Both pattern (AxC, CxB) are estimated'
                         continue
 
-                    is_changed_overlap = False
-                    if len(common_pattern1) > len(pattern1):
-                        for added_pattern_idx in added_pattern_idx_in_common_pattern1_list:
-                            if added_pattern_idx >= len(pattern1):
-                                is_changed_overlap = True
-                    if len(common_pattern2) > len(pattern2):
-                        for added_pattern_idx in added_pattern_idx_in_common_pattern2_list:
-                            if added_pattern_idx < (len(common_pattern2) - len(pattern2)):
-                                is_changed_overlap = True
-
-                    if is_changed_overlap:
-                        max_common_pattern_len = max(len(common_pattern1), len(common_pattern2))
-                        if common_pattern1[-(max_common_pattern_len-1):] != common_pattern2[:max_common_pattern_len-1]: # common pattern is checked in overlaped range
-                            continue
-                    else:
-                        if common_pattern1[-(len(pattern1)-1):] != common_pattern2[:len(pattern2)-1]: # common pattern is checked in overlaped range
-                            continue
+                    if common_pattern1[-(len(pattern1)-1):] != common_pattern2[:len(pattern2)-1]: # common pattern is checked in overlaped range
+                        continue
 
                     if pattern1_common_pattern_supp < pattern2_common_pattern_supp:
                         upper_bound = upper_bound + min(((pattern2_supp - upper_bound) - (pattern2_common_pattern_supp - pattern1_common_pattern_supp)),0)
@@ -742,44 +720,35 @@ def UpdateUpperBoundSupportPairSets(pattern_list1, pattern_list2, pattern_to_upp
     if not UPPER_BOUND_RULE_BASED_COMMON:
         return dict() # Return empty
  
-    endUpdate = True
-    updateCnt = 0
-    while endUpdate:
-        # Update upper bound support until upper bound is not changed.
-        updateCnt += 1
-        updated_upper_bound_support_cnt = 0
-        # calculate upper bound support of pairs
-        for pattern1 in pattern_list1:
-            for pattern2 in pattern_list2:
-                new_pattern_info, upper_bound_info, upper_bound_support = calculateUpperBoundSupport(pattern1, pattern2, is_right, left1, left2)
-                if new_pattern_info is not None and upper_bound_info is not None:
-                    # save upper bound support information
-                    if new_pattern_info not in next_pattern_to_support or next_pattern_to_support[new_pattern_info] != upper_bound_support:
-                        pattern_to_upper_bound_support[new_pattern_info] = upper_bound_info # upper bound information dictionary
-                        next_pattern_to_support[new_pattern_info] = upper_bound_support
-                        updated_upper_bound_support_cnt += 1
+    # calculate upper bound support of pairs
+    for pattern1 in pattern_list1:
+        for pattern2 in pattern_list2:
+            new_pattern_info, upper_bound_info, upper_bound_support = calculateUpperBoundSupport(pattern1, pattern2, is_right, left1, left2)
+            if new_pattern_info is not None and upper_bound_info is not None:
+                # save upper bound support information
+                if new_pattern_info not in next_pattern_to_support or next_pattern_to_support[new_pattern_info] != upper_bound_support:
+                    pattern_to_upper_bound_support[new_pattern_info] = upper_bound_info # upper bound information dictionary
+                    next_pattern_to_support[new_pattern_info] = upper_bound_support
 
-        # Update superset pattern support based on subset pattern
-        if UPPER_BOUND_RULE_UPDATE_BASED_SUB_PATTERN:
-            for subset_pattern_info in next_pattern_to_support:
-                subset_pattern = subset_pattern_info[0]
-                subset_pattern_gap_list = subset_pattern_info[1]
-                subset_pattern_support = next_pattern_to_support[subset_pattern_info]
-                for superset_pattern_info in next_pattern_to_support:
-                    # Update based on only upper bound support of subset pattern
-                    if subset_pattern_info in pattern_to_calculated_support or superset_pattern_info in pattern_to_calculated_support:
-                        continue
-                    superset_pattern = superset_pattern_info[0]
-                    superset_pattern_gap_list = superset_pattern_info[1]
-                    superset_pattern_support = next_pattern_to_support[superset_pattern_info]
-                    # Check that the candidate of superset pattirn is superset of subset_pattern
-                    is_superset_of_pattern1, added_pattern_of_pattern1, added_pattern_idx_in_subset_pattern_list, added_pattern_idx_in_superset_pattern_list = getIsSupersetPatternWithAddedPattern(subset_pattern, superset_pattern, subset_pattern_gap_list, superset_pattern_gap_list)
-                    if is_superset_of_pattern1 and superset_pattern_support > subset_pattern_support:
-                        next_pattern_to_support[superset_pattern_info] = subset_pattern_support
-                        pattern_to_upper_bound_support[superset_pattern_info] = pattern_to_upper_bound_support[subset_pattern_info]
+    # Update superset pattern support based on subset pattern
+    if UPPER_BOUND_RULE_UPDATE_BASED_SUB_PATTERN:
+        for subset_pattern_info in next_pattern_to_support:
+            subset_pattern = subset_pattern_info[0]
+            subset_pattern_gap_list = subset_pattern_info[1]
+            subset_pattern_support = next_pattern_to_support[subset_pattern_info]
+            for superset_pattern_info in next_pattern_to_support:
+                # Update based on only upper bound support of subset pattern
+                if subset_pattern_info in pattern_to_calculated_support or superset_pattern_info in pattern_to_calculated_support:
+                    continue
+                superset_pattern = superset_pattern_info[0]
+                superset_pattern_gap_list = superset_pattern_info[1]
+                superset_pattern_support = next_pattern_to_support[superset_pattern_info]
+                # Check that the candidate of superset pattirn is superset of subset_pattern
+                is_superset_of_pattern1, _, _, _ = getIsSupersetPatternWithAddedPattern(subset_pattern, superset_pattern, subset_pattern_gap_list, superset_pattern_gap_list)
+                if is_superset_of_pattern1 and superset_pattern_support > subset_pattern_support:
+                    next_pattern_to_support[superset_pattern_info] = subset_pattern_support
+                    pattern_to_upper_bound_support[superset_pattern_info] = pattern_to_upper_bound_support[subset_pattern_info]
     
-        if (not UPPER_BOUND_RULE_UPDATED_BASED_ESTIMATED_PATTERN) or updated_upper_bound_support_cnt == 0:
-            endUpdate = False
     return pattern_to_upper_bound_support
 
 # min_sup = 1.0 / 10.0
@@ -865,8 +834,7 @@ for user_idx, file_info in enumerate(file_info_list):
                 max_partial_len = 1
             is_stop = False
             while not is_stop:
-                UPPER_BOUND_RULE_UPDATED_BASED_ESTIMATED_PATTERN = False # This does not work. Common pattern have to be in overlaped range
-                for PRUNING_RULE1_ON, PRUNING_RULE2_ON, PRUNING_RULE3_ON, UPPER_BOUND_RULE_BASED_COMMON, UPPER_BOUND_RULE_UPDATE_BASED_SUB_PATTERN in [(True, True, False, True, False)]:#, (True, True, False, False, False)]: #[(True, True, False), (False, True, False), (True, False, False), (False, False, False)]:
+                for PRUNING_RULE1_ON, PRUNING_RULE2_ON, PRUNING_RULE3_ON, UPPER_BOUND_RULE_BASED_COMMON, UPPER_BOUND_RULE_UPDATE_BASED_SUB_PATTERN in [(True, True, False, True, True)]:#, (True, True, False, False, False)]: #[(True, True, False), (False, True, False), (True, False, False), (False, False, False)]:
                     print ">>>>>> min_sup: %f, min_conf: %f, max_partial_len: %d <<<<<<" % (min_sup, min_conf, max_partial_len)
                     print "Pruning Rule (Foward Stop + Prune, Backward Prune): %s, %s" % (PRUNING_RULE1_ON, PRUNING_RULE2_ON)
                     print "Upper Bound Rule (Common, Subset): %s, %s" % (UPPER_BOUND_RULE_BASED_COMMON, UPPER_BOUND_RULE_UPDATE_BASED_SUB_PATTERN)
