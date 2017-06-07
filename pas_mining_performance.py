@@ -283,26 +283,6 @@ def isValidateCombanation(min_sup, left1, left2, pruned_candidate, able_candidat
             if is_include is True:
                 output_tids.append(left_tids)
         '''
-        '''
-        left_tids = left_tids_for_right[0]
-        idx_delta_list = list()
-        prev_tid = None
-        for tid in left_tids:
-            if prev_tid is not None:
-                idx_delta_list.append(tid - prev_tid)
-            prev_tid = tid
-        '''
-        # print idx_delta_list
-        # print left_tids
-
-        '''
-        new_pattern_key = (new_pattern, tuple(idx_delta_list))
-        if new_pattern_key in next_pattern_to_support and UPPER_BOUND_RULE_BASED_COMMON:
-            upper_bound_support = next_pattern_to_support[new_pattern_key]
-            if upper_bound_support < min_sup:
-                UPPER_BOUND_PRUNED_CNT += 1
-                return is_sequence, new_pattern, None, idx_delta_list
-        '''
 
         check_pattern_idx = 0
         prev_tid_pattern_idx = None
@@ -350,13 +330,6 @@ def isValidateCombanation(min_sup, left1, left2, pruned_candidate, able_candidat
 
     end_method_time = time.time()
 
-    '''
-    if pattern_to_upper_bound_support is not None:
-        new_pattern_key = (new_pattern, tuple(idx_delta_list))
-        if new_pattern_key in pattern_to_upper_bound_support:
-            upper_bound_info = pattern_to_upper_bound_support[new_pattern_key]
-            F_UPPER.write(str(next_pattern_support) + "\t" + "\t".join(str(i) for i in list(upper_bound_info)) + "\n") # + str(upper_time) + "\t" + str(end_method_time - start_method_time) + "\n")
-    '''
     return is_sequence, new_pattern, output_tids, idx_delta_list
 
 
@@ -425,10 +398,6 @@ def getUpperBoundSupport(new_pattern_info, pattern1, pattern2, is_antecedent, le
         pattern_type = 1
     
     # Naive Method
-
-    # print "pattern 1: " + str(pattern1)
-    # print "pattern 2: " + str(pattern2)
-
     pattern1_supp = getSupportFromPrevRules(pattern1, left_pattern1)
     pattern2_supp = getSupportFromPrevRules(pattern2, left_pattern2)
     upper_bound = min(pattern1_supp, pattern2_supp)
@@ -441,10 +410,6 @@ def getUpperBoundSupport(new_pattern_info, pattern1, pattern2, is_antecedent, le
         return upper_bound, None
 
     # Get common pattern C
-    # pattern_len = len(pattern2)
-    # common_pattern = pattern2[:pattern_len - 1]
-
-    # print common_pattern
 
     # Get Gap List of Pattern1, Pattern2
     if is_antecedent:
@@ -514,16 +479,8 @@ def getUpperBoundSupport(new_pattern_info, pattern1, pattern2, is_antecedent, le
     for superset_common_pattern in superset_common_pattern_to_superset_pair_support:
         superset_pair_support = superset_common_pattern_to_superset_pair_support[superset_common_pattern]
         if len(superset_pair_support.keys()) == 2:
-            # print "--------------------------------"
-            # print pattern1
-            # print pattern2
-            # print superset_common_pattern
-            # print superset_pair_support[0][0]
-            # print superset_pair_support[1][0]
 
             # Calculate upper bound
-            # if supp(B) > supp(A)
-            # min(supp(A,C), supp(C,B)) + min(supp(B) - max(0, supp(C,B) - supp(A,C)), upper_bound) - supp(A)
             upper_bound = min(pattern1_supp, pattern2_supp) # Naive
             for superset_pair_support_pattern1 in superset_pair_support[0]:
                 for superset_pair_support_pattern2 in superset_pair_support[1]:
@@ -537,12 +494,6 @@ def getUpperBoundSupport(new_pattern_info, pattern1, pattern2, is_antecedent, le
                     added_pattern_idx_in_common_pattern1_list = superset_pair_support_pattern1[2]
                     added_pattern_idx_in_common_pattern2_list = superset_pair_support_pattern2[2]
 
-                    # print "---------------TEST--------------"
-                    # print common_pattern1
-                    # print common_pattern2
-                    # print pattern1
-                    # print pattern2 
-                    # print len(common_pattern1), len(common_pattern2), len(pattern1), len(pattern2)
                     if len(common_pattern1) > len(pattern1) and len(common_pattern2) > len(pattern2): # Both pattern (AxC, CxB) are estimated'
                         continue
                     # The estimated support of pattern have to be smaller than calculated support of pattern
@@ -568,35 +519,17 @@ def getUpperBoundSupport(new_pattern_info, pattern1, pattern2, is_antecedent, le
                     else:
                         if common_pattern1[-(len(pattern1)-1):] != common_pattern2[:len(pattern2)-1]: # common pattern is checked in overlaped range
                             continue
- 
-
-                    # print "--------------------------------"
 
                     if pattern1_common_pattern_supp < pattern2_common_pattern_supp:
                         upper_bound = upper_bound + min(((pattern2_supp - upper_bound) - (pattern2_common_pattern_supp - pattern1_common_pattern_supp)),0)
                     else:
                         upper_bound = upper_bound + min(((pattern1_supp - upper_bound) - (pattern1_common_pattern_supp - pattern2_common_pattern_supp)),0)
-                    '''
-                    if pattern1_supp < pattern2_supp:
-                        upper_bound = min(pattern1_common_pattern_supp, pattern2_common_pattern_supp) + min(pattern2_supp - max(0, pattern2_common_pattern_supp - pattern1_common_pattern_supp), upper_bound) - pattern1_common_pattern_supp
-                    else:
-                        upper_bound = min(pattern1_common_pattern_supp, pattern2_common_pattern_supp) + min(pattern1_supp - max(0, pattern1_common_pattern_supp - pattern2_common_pattern_supp), upper_bound) - pattern2_common_pattern_supp
-                    '''
                     if min_upper_bound > upper_bound:
                         min_upper_bound = upper_bound
                         max_superset_pair_support = (superset_pair_support_pattern1, superset_pair_support_pattern2)
                         max_superset_common_pattern = superset_common_pattern
 
     upper_bound = min_upper_bound
-    '''
-    if max_superset_pair_support is not None:
-        print pattern1
-        print pattern2
-        print pattern1_supp
-        print pattern2_supp
-        print max_superset_pair_support
-        print "Upper Bound: " + str(upper_bound)
-    '''
 
     return upper_bound, (pattern1, pattern2, pattern1_supp, pattern2_supp, upper_bound, max_superset_pair_support, max_superset_common_pattern)
 
@@ -824,35 +757,17 @@ def UpdateUpperBoundSupportPairSets(pattern_list1, pattern_list2, pattern_to_upp
     updateCnt = 0
     while endUpdate:
         # Update upper bound support until upper bound is not changed.
-        # print "Upper Bound Update: %d" % updateCnt
         updateCnt += 1
         updated_upper_bound_support_cnt = 0
         for pattern1 in pattern_list1:
             for pattern2 in pattern_list2:
                 new_pattern_info, upper_bound_info, upper_bound_support = calculateUpperBoundSupport(pattern1, pattern2, is_right, left1, left2)
                 if new_pattern_info is not None and upper_bound_info is not None:
-                    # pattern_to_upper_bound_support[new_pattern_info] = upper_bound_info
-                    # next_pattern_to_support[new_pattern_info] = upper_bound_support #Key contain gap list (new_pattern, gap_list)
                     if new_pattern_info not in next_pattern_to_support or next_pattern_to_support[new_pattern_info] != upper_bound_support:
-                        '''
-                        print "-----------------------"
-                        print new_pattern_info
-                        print upper_bound_info
-                        print upper_bound_support
-                        if new_pattern_info in next_pattern_to_support:
-                            print "Before Update", next_pattern_to_support[new_pattern_info]
-                        '''
                         pattern_to_upper_bound_support[new_pattern_info] = upper_bound_info
                         next_pattern_to_support[new_pattern_info] = upper_bound_support
                         updated_upper_bound_support_cnt += 1
 
-                        # print "-----------------------"
-        # Update upper bound support for each pattern
-        # print "Upper bound update information", updated_upper_bound_support_cnt
-
-        # Update prev_pattern_to_support based on next_pattern_to_upper_bound_support (upper bound pattern)
-        # for new_pattern_info in next_pattern_to_upper_bound_support:
-        #    prev_pattern_to_support[new_pattern_info] = next_pattern_to_upper_bound_support[new_pattern_info]
 
         # Update superset pattern support based on subset pattern
         if UPPER_BOUND_RULE_UPDATE_BASED_SUB_PATTERN:
@@ -869,13 +784,6 @@ def UpdateUpperBoundSupportPairSets(pattern_list1, pattern_list2, pattern_to_upp
                     superset_pattern_support = next_pattern_to_support[superset_pattern_info]
                     is_superset_of_pattern1, added_pattern_of_pattern1, added_pattern_idx_in_subset_pattern_list, added_pattern_idx_in_superset_pattern_list = getIsSupersetPatternWithAddedPattern(subset_pattern, superset_pattern, subset_pattern_gap_list, superset_pattern_gap_list)
                     if is_superset_of_pattern1 and superset_pattern_support > subset_pattern_support:
-                        '''
-                        print "------UPDATE_BASED_SUB_PATTERN-------"
-                        print subset_pattern_info
-                        print superset_pattern_info
-                        print subset_pattern_support
-                        print superset_pattern_support
-                        '''
                         next_pattern_to_support[superset_pattern_info] = subset_pattern_support
                         pattern_to_upper_bound_support[superset_pattern_info] = pattern_to_upper_bound_support[subset_pattern_info]
     
@@ -1279,6 +1187,7 @@ for user_idx, file_info in enumerate(file_info_list):
                             print end_ts - start_ts
                             print "Combination Test Cnt: " + str(test_combination_cnt)
 
+                            '''
                             for new_pattern_key in pattern_to_upper_bound_support:
                                 upper_bound_info = pattern_to_upper_bound_support[new_pattern_key]
                                 calculated_support = pattern_to_calculated_support[new_pattern_key]
@@ -1290,8 +1199,7 @@ for user_idx, file_info in enumerate(file_info_list):
                                 if new_pattern_key in pattern_to_calculated_support:
                                     calculated_support = pattern_to_calculated_support[new_pattern_key]
                                 F_UPPER.write(str(new_pattern_key) + "\t" + str(calculated_support) + "\t" + "\t".join(str(i) for i in list(upper_bound_info)) + "\n") # + str(upper_time) + "\t" + str(end_method_time - start_method_time) + "\n")
-
-
+                            '''
 
                             if time.time() - ALL_STARTTIME > 1000:
                                 print "Too long execution time!"
