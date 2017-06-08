@@ -193,7 +193,7 @@ def isValidateCombanation(min_sup, left1, left2, pruned_candidate, able_candidat
     partial_test = False
     if not is_right:
         new_pattern_key = (new_pattern, tuple(idx_delta_list))
-        if new_pattern_key in next_pattern_to_support and UPPER_BOUND_RULE_BASED_COMMON:
+        if new_pattern_key in next_pattern_to_support: # and UPPER_BOUND_RULE_BASED_COMMON:
             upper_bound_support = next_pattern_to_support[new_pattern_key]
             if upper_bound_support < min_sup:
                 UPPER_BOUND_PRUNED_CNT += 1
@@ -252,7 +252,7 @@ def isValidateCombanation(min_sup, left1, left2, pruned_candidate, able_candidat
             prev_tid = tid
 
         new_pattern_key = (new_pattern, tuple(idx_delta_list))
-        if new_pattern_key in next_pattern_to_support and UPPER_BOUND_RULE_BASED_COMMON:
+        if new_pattern_key in next_pattern_to_support: # and UPPER_BOUND_RULE_BASED_COMMON:
             upper_bound_support = next_pattern_to_support[new_pattern_key]
             if upper_bound_support < min_sup:
                 UPPER_BOUND_PRUNED_CNT += 1
@@ -383,10 +383,6 @@ def getUpperBoundSupport(new_pattern_info, pattern1, pattern2, is_antecedent, le
     global next_pattern_to_support
     # If pattern1 and pattern2 are consequent patterns, ancedent pattern (left_pattern1, left_pattern2) are needed.
     # Rule Info: (new_left, new_right, left_tids, new_both_tids, support, confidence, right_tids, left_support, right_support)  # , new_left_symbol, new_right_symbol)
-    if is_antecedent:
-        pattern_type = 0
-    else:
-        pattern_type = 1
     
     # Naive Method
     # For example,
@@ -430,6 +426,9 @@ def getUpperBoundSupport(new_pattern_info, pattern1, pattern2, is_antecedent, le
                     if overlap_idx in added_pattern_idx_in_subset_pattern_list:
                         added_pattern_idx_validation = True
                         break
+                    else:
+                        break
+
             # Case of this candidate pattern is (A,C)
             if is_superset_of_pattern1 and added_pattern_idx_validation:
                 if not added_pattern_of_pattern1 in superset_common_pattern_to_superset_pair_support:
@@ -446,6 +445,8 @@ def getUpperBoundSupport(new_pattern_info, pattern1, pattern2, is_antecedent, le
                 for overlap_idx in range(len(pattern2))[:len(pattern2)-1]:
                     if overlap_idx in added_pattern_idx_in_subset_pattern_list:
                         added_pattern_idx_validation = True
+                        break
+                    else:
                         break
             
             # Case of this candidate pattern is (C,B)
@@ -834,7 +835,7 @@ for user_idx, file_info in enumerate(file_info_list):
                 max_partial_len = 1
             is_stop = False
             while not is_stop:
-                for PRUNING_RULE1_ON, PRUNING_RULE2_ON, PRUNING_RULE3_ON, UPPER_BOUND_RULE_BASED_COMMON, UPPER_BOUND_RULE_UPDATE_BASED_SUB_PATTERN in [(True, True, False, True, True)]:#, (True, True, False, False, False)]: #[(True, True, False), (False, True, False), (True, False, False), (False, False, False)]:
+                for PRUNING_RULE1_ON, PRUNING_RULE2_ON, PRUNING_RULE3_ON, UPPER_BOUND_RULE_BASED_COMMON, UPPER_BOUND_RULE_UPDATE_BASED_SUB_PATTERN in [(True, True, False, True, False), (True, True, False, True, False), (True, True, False, True, True)]: #[(True, True, False), (False, True, False), (True, False, False), (False, False, False)]:
                     print ">>>>>> min_sup: %f, min_conf: %f, max_partial_len: %d <<<<<<" % (min_sup, min_conf, max_partial_len)
                     print "Pruning Rule (Foward Stop + Prune, Backward Prune): %s, %s" % (PRUNING_RULE1_ON, PRUNING_RULE2_ON)
                     print "Upper Bound Rule (Common, Subset): %s, %s" % (UPPER_BOUND_RULE_BASED_COMMON, UPPER_BOUND_RULE_UPDATE_BASED_SUB_PATTERN)
@@ -1149,7 +1150,9 @@ for user_idx, file_info in enumerate(file_info_list):
                             
                             for new_pattern_key in pattern_to_upper_bound_support:
                                 upper_bound_info = pattern_to_upper_bound_support[new_pattern_key]
-                                calculated_support = pattern_to_calculated_support[new_pattern_key]
+                                calculated_support = -1
+                                if new_pattern_key in pattern_to_calculated_support:
+                                    calculated_support = pattern_to_calculated_support[new_pattern_key]
                                 F_UPPER.write(str(new_pattern_key) + "\t" + str(calculated_support) + "\t" + "\t".join(str(i) for i in list(upper_bound_info)) + "\n") # + str(upper_time) + "\t" + str(end_method_time - start_method_time) + "\n")
 
                             for new_pattern_key in right_pattern_to_upper_bound_support:
