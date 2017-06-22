@@ -193,7 +193,7 @@ def isValidateCombanation(min_sup, left1, left2, pruned_candidate, able_candidat
     partial_test = False
     if not is_right:
         new_pattern_key = (new_pattern, tuple(idx_delta_list))
-        if new_pattern_key in next_pattern_to_support and UPPER_BOUND_RULE_BASED_COMMON:
+        if new_pattern_key in next_pattern_to_support: # and UPPER_BOUND_RULE_BASED_COMMON:
             upper_bound_support = next_pattern_to_support[new_pattern_key]
             if upper_bound_support < min_sup:
                 UPPER_BOUND_PRUNED_CNT += 1
@@ -252,7 +252,7 @@ def isValidateCombanation(min_sup, left1, left2, pruned_candidate, able_candidat
             prev_tid = tid
 
         new_pattern_key = (new_pattern, tuple(idx_delta_list))
-        if new_pattern_key in next_pattern_to_support and UPPER_BOUND_RULE_BASED_COMMON:
+        if new_pattern_key in next_pattern_to_support: # and UPPER_BOUND_RULE_BASED_COMMON:
             upper_bound_support = next_pattern_to_support[new_pattern_key]
             if upper_bound_support < min_sup:
                 UPPER_BOUND_PRUNED_CNT += 1
@@ -474,7 +474,6 @@ def getUpperBoundSupport(new_pattern_info, pattern1, pattern2, is_antecedent, le
             upper_bound = min(pattern1_supp, pattern2_supp) # Naive
             for superset_pair_support_pattern1 in superset_pair_support[0]:
                 for superset_pair_support_pattern2 in superset_pair_support[1]:
-                    # TODO: To use estimated support, it have to be super-pattern of another pattern that is not estimated.
                     common_pattern1 = superset_pair_support_pattern1[0]
                     common_pattern2 = superset_pair_support_pattern2[0]
                   
@@ -761,11 +760,11 @@ def UpdateUpperBoundSupportPairSets(pattern_list1, pattern_list2, pattern_to_upp
 
         # Update superset pattern support based on subset pattern
         if UPPER_BOUND_RULE_UPDATE_BASED_SUB_PATTERN:
-            for subset_pattern_info in next_pattern_to_support:
+            for subset_pattern_info in pattern_to_upper_bound_support:
                 subset_pattern = subset_pattern_info[0]
                 subset_pattern_gap_list = subset_pattern_info[1]
                 subset_pattern_support = next_pattern_to_support[subset_pattern_info]
-                for superset_pattern_info in next_pattern_to_support:
+                for superset_pattern_info in pattern_to_upper_bound_support:
                     # Update based on only upper bound support of subset pattern
                     if subset_pattern_info in pattern_to_calculated_support or superset_pattern_info in pattern_to_calculated_support:
                         continue
@@ -819,7 +818,6 @@ granularity_min = 60
 MIN_DATE_LENGTH = 30
 
 # log = open('user_log.txt', 'w')
-F_UPPER = open('output/upper_bound_result.txt', 'w')
 F_PERFORM = open('output/performance_result.txt', 'w')
 file_info_list = file_info_list[start_idx:end_idx]
 
@@ -865,15 +863,16 @@ for user_idx, file_info in enumerate(file_info_list):
                 max_partial_len = 1
             is_stop = False
             while not is_stop:
-                UPPER_BOUND_RULE_UPDATED_BASED_ESTIMATED_PATTERN = False # This does not work. Common pattern have to be in overlaped range
-                for PRUNING_RULE1_ON, PRUNING_RULE2_ON, PRUNING_RULE3_ON, UPPER_BOUND_RULE_BASED_COMMON, UPPER_BOUND_RULE_UPDATE_BASED_SUB_PATTERN in [(True, True, False, True, False)]:#, (True, True, False, False, False)]: #[(True, True, False), (False, True, False), (True, False, False), (False, False, False)]:
+                for PRUNING_RULE1_ON, PRUNING_RULE2_ON, PRUNING_RULE3_ON, UPPER_BOUND_RULE_BASED_COMMON, UPPER_BOUND_RULE_UPDATE_BASED_SUB_PATTERN, UPPER_BOUND_RULE_UPDATED_BASED_ESTIMATED_PATTERN in [(True, True, True, False, False, False), (True, True, False, True, False, False), (True, True, False, True, True, False), (True, True, False, True, False, True), (True, True, False, True, True, True)]:#, (True, True, False, False, False)]: #[(True, True, False), (False, True, False), (True, False, False), (False, False, False)]:
                     print ">>>>>> min_sup: %f, min_conf: %f, max_partial_len: %d <<<<<<" % (min_sup, min_conf, max_partial_len)
                     print "Pruning Rule (Foward Stop + Prune, Backward Prune): %s, %s" % (PRUNING_RULE1_ON, PRUNING_RULE2_ON)
-                    print "Upper Bound Rule (Common, Subset): %s, %s" % (UPPER_BOUND_RULE_BASED_COMMON, UPPER_BOUND_RULE_UPDATE_BASED_SUB_PATTERN)
+                    print "Upper Bound Rule (Common, Subset, Estimated): %s, %s, %s" % (UPPER_BOUND_RULE_BASED_COMMON, UPPER_BOUND_RULE_UPDATE_BASED_SUB_PATTERN, UPPER_BOUND_RULE_UPDATED_BASED_ESTIMATED_PATTERN)
                     # f_entropy_result_pickle = open('entropy_result/%s_pattern_pair_entropy_%.2f_%.2f.pickle' % (file_info, min_sup, min_conf), 'w')
                     # f_entropy_result = open('entropy_result/%s_pattern_pair_entropy_%.2f_%.2f.txt' % (file_info, min_sup, min_conf), 'w')
                     # f_entropy_avg_result = open('entropy_result/%s_class_avg_entropy_%.2f_%.2f.txt' % (file_info, min_sup, min_conf), 'w')
                     # pattern_pair_entropy_result_list = list()
+
+                    F_UPPER = open('output/upper_bound_result_%s_%s_%s.txt' % (UPPER_BOUND_RULE_BASED_COMMON, UPPER_BOUND_RULE_UPDATE_BASED_SUB_PATTERN, UPPER_BOUND_RULE_UPDATED_BASED_ESTIMATED_PATTERN), 'w')
 
                     pattern_to_calculated_support = dict()
                     UPPER_BOUND_PRUNED_CNT = 0
@@ -1182,6 +1181,8 @@ for user_idx, file_info in enumerate(file_info_list):
                             for new_pattern_key in pattern_to_upper_bound_support:
                                 upper_bound_info = pattern_to_upper_bound_support[new_pattern_key]
                                 calculated_support = pattern_to_calculated_support[new_pattern_key]
+                                if new_pattern_key in pattern_to_calculated_support:
+                                    calculated_support = pattern_to_calculated_support[new_pattern_key]
                                 F_UPPER.write(str(new_pattern_key) + "\t" + str(calculated_support) + "\t" + "\t".join(str(i) for i in list(upper_bound_info)) + "\n") # + str(upper_time) + "\t" + str(end_method_time - start_method_time) + "\n")
 
                             for new_pattern_key in right_pattern_to_upper_bound_support:
@@ -1191,7 +1192,8 @@ for user_idx, file_info in enumerate(file_info_list):
                                     calculated_support = pattern_to_calculated_support[new_pattern_key]
                                 F_UPPER.write(str(new_pattern_key) + "\t" + str(calculated_support) + "\t" + "\t".join(str(i) for i in list(upper_bound_info)) + "\n") # + str(upper_time) + "\t" + str(end_method_time - start_method_time) + "\n")
                             
-
+                            pattern_to_upper_bound_support = dict()
+                            right_pattern_to_upper_bound_support = dict()
                             if time.time() - ALL_STARTTIME > 1000:
                                 print "Too long execution time!"
                                 break
@@ -1199,6 +1201,7 @@ for user_idx, file_info in enumerate(file_info_list):
                             if k == 24 or len(next_rules) == 0:  # len(timestampList):
                                 print "Complete"
                                 print "Upper bound pruned pair count: %d" % UPPER_BOUND_PRUNED_CNT
+                                F_UPPER.close()
                                 break
 
                         '''
@@ -1307,5 +1310,4 @@ for user_idx, file_info in enumerate(file_info_list):
                         is_stop = True
                     max_partial_len = max_partial_len + 1
                     print min_sup
-F_UPPER.close()
 # log.close()
